@@ -85,7 +85,7 @@ export class WebviewContent extends AngularDisposable implements OnInit, IDashbo
 
 	public sendMessage(message: string): void {
 		if (this._webview) {
-			this._webview.postMessage(message);
+			this._webview.sendMessage(message);
 		}
 	}
 
@@ -98,11 +98,11 @@ export class WebviewContent extends AngularDisposable implements OnInit, IDashbo
 			this._onMessageDisposable.dispose();
 		}
 
-		this._webview = this.webviewService.createWebviewElement(this.id,
+		this._webview = this.webviewService.createWebview(this.id,
 			{},
 			{
 				allowScripts: true
-			}, undefined);
+			});
 
 		this._webview.mountTo(this._el.nativeElement);
 

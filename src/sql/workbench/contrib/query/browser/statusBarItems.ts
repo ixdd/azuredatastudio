@@ -4,15 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
-import { IQueryModelService } from 'sql/workbench/services/query/common/queryModel';
+import { IQueryModelService } from 'sql/platform/query/common/queryModel';
 import { IntervalTimer } from 'vs/base/common/async';
 import { Disposable, DisposableStore } from 'vs/base/common/lifecycle';
 import { IWorkbenchContribution } from 'vs/workbench/common/contributions';
 import { localize } from 'vs/nls';
-import QueryRunner from 'sql/workbench/services/query/common/queryRunner';
+import { QueryInput } from 'sql/workbench/contrib/query/common/queryInput';
+import QueryRunner from 'sql/platform/query/common/queryRunner';
 import { parseNumAsTimeString } from 'sql/platform/connection/common/utils';
 import { Event } from 'vs/base/common/event';
-import { QueryEditorInput } from 'sql/workbench/common/editor/query/queryEditorInput';
 import { IStatusbarService, IStatusbarEntryAccessor, StatusbarAlignment } from 'vs/workbench/services/statusbar/common/statusbar';
 
 export class TimeElapsedStatusBarContributions extends Disposable implements IWorkbenchContribution {
@@ -33,7 +33,6 @@ export class TimeElapsedStatusBarContributions extends Disposable implements IWo
 		this.statusItem = this._register(
 			this.statusbarService.addEntry({
 				text: '',
-				ariaLabel: ''
 			},
 				TimeElapsedStatusBarContributions.ID,
 				localize('status.query.timeElapsed', "Time Elapsed"),
@@ -57,7 +56,7 @@ export class TimeElapsedStatusBarContributions extends Disposable implements IWo
 		this.disposable.clear();
 		this.hide();
 		const activeInput = this.editorService.activeEditor;
-		if (activeInput && activeInput instanceof QueryEditorInput && activeInput.uri) {
+		if (activeInput && activeInput instanceof QueryInput && activeInput.uri) {
 			const uri = activeInput.uri;
 			const runner = this.queryModelService.getQueryRunner(uri);
 			if (runner) {
@@ -90,26 +89,20 @@ export class TimeElapsedStatusBarContributions extends Disposable implements IWo
 		if (runner.isExecuting) {
 			this.intervalTimer.cancelAndSet(() => {
 				const value = runner.queryStartTime ? Date.now() - runner.queryStartTime.getTime() : 0;
-				const timeString = parseNumAsTimeString(value, false);
 				this.statusItem.update({
-					text: timeString,
-					ariaLabel: timeString
+					text: parseNumAsTimeString(value, false)
 				});
 			}, 1000);
 
 			const value = runner.queryStartTime ? Date.now() - runner.queryStartTime.getTime() : 0;
-			const timeString = parseNumAsTimeString(value, false);
 			this.statusItem.update({
-				text: timeString,
-				ariaLabel: timeString
+				text: parseNumAsTimeString(value, false)
 			});
 		} else {
 			const value = runner.queryStartTime && runner.queryEndTime
 				? runner.queryEndTime.getTime() - runner.queryStartTime.getTime() : 0;
-			const timeString = parseNumAsTimeString(value, false);
 			this.statusItem.update({
-				text: timeString,
-				ariaLabel: timeString
+				text: parseNumAsTimeString(value, false)
 			});
 		}
 		this.show();
@@ -133,7 +126,6 @@ export class RowCountStatusBarContributions extends Disposable implements IWorkb
 		this.statusItem = this._register(
 			this.statusbarService.addEntry({
 				text: '',
-				ariaLabel: ''
 			},
 				RowCountStatusBarContributions.ID,
 				localize('status.query.rowCount', "Row Count"),
@@ -156,7 +148,7 @@ export class RowCountStatusBarContributions extends Disposable implements IWorkb
 		this.disposable.clear();
 		this.hide();
 		const activeInput = this.editorService.activeEditor;
-		if (activeInput && activeInput instanceof QueryEditorInput && activeInput.uri) {
+		if (activeInput && activeInput instanceof QueryInput && activeInput.uri) {
 			const uri = activeInput.uri;
 			const runner = this.queryModelService.getQueryRunner(uri);
 			if (runner) {
@@ -198,8 +190,8 @@ export class RowCountStatusBarContributions extends Disposable implements IWorkb
 				return rp + rc.rowCount;
 			}, 0);
 		}, 0);
-		const text = localize('rowCount', "{0} rows", rowCount.toLocaleString());
-		this.statusItem.update({ text, ariaLabel: text });
+		const text = localize('rowCount', "{0} rows", rowCount);
+		this.statusItem.update({ text });
 		this.show();
 	}
 }
@@ -219,7 +211,6 @@ export class QueryStatusStatusBarContributions extends Disposable implements IWo
 		this._register(
 			this.statusbarService.addEntry({
 				text: localize('query.status.executing', "Executing query..."),
-				ariaLabel: localize('query.status.executing', "Executing query...")
 			},
 				QueryStatusStatusBarContributions.ID,
 				localize('status.query.status', "Execution Status"),
@@ -236,7 +227,7 @@ export class QueryStatusStatusBarContributions extends Disposable implements IWo
 		this.hide();
 		this.visisbleUri = undefined;
 		const activeInput = this.editorService.activeEditor;
-		if (activeInput && activeInput instanceof QueryEditorInput && activeInput.uri) {
+		if (activeInput && activeInput instanceof QueryInput && activeInput.uri) {
 			this.visisbleUri = activeInput.uri;
 			const runner = this.queryModelService.getQueryRunner(this.visisbleUri);
 			if (runner && runner.isExecuting) {

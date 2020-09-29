@@ -6,7 +6,6 @@
 /* Node Modules */
 import { Injectable, Inject } from '@angular/core';
 import { Observable } from 'rxjs/Observable';
-import 'rxjs/add/observable/fromPromise';
 
 /* SQL imports */
 import { IDefaultComponentParams, IBootstrapParams } from 'sql/workbench/services/bootstrap/common/bootstrapParams';
@@ -14,10 +13,10 @@ import { IMetadataService } from 'sql/platform/metadata/common/metadataService';
 import { IConnectionManagementService } from 'sql/platform/connection/common/connectionManagement';
 import { ConnectionManagementInfo } from 'sql/platform/connection/common/connectionManagementInfo';
 import { IAdminService } from 'sql/workbench/services/admin/common/adminService';
-import { IQueryManagementService } from 'sql/workbench/services/query/common/queryManagement';
+import { IQueryManagementService } from 'sql/platform/query/common/queryManagement';
 import { IConnectionProfile } from 'sql/platform/connection/common/interfaces';
 import { AngularDisposable } from 'sql/base/browser/lifecycle';
-import { ConnectionContextKey } from 'sql/workbench/services/connection/common/connectionContextKey';
+import { ConnectionContextKey } from 'sql/workbench/contrib/connection/common/connectionContextKey';
 
 import { ProviderMetadata, DatabaseInfo, SimpleExecuteResult } from 'azdata';
 
@@ -36,8 +35,8 @@ export class SingleConnectionMetadataService {
 		return Observable.fromPromise(this._metadataService.getMetadata(this._uri));
 	}
 
-	get databases(): Observable<string[] | DatabaseInfo[]> {
-		return Observable.fromPromise(this._metadataService.getDatabases(this._uri));
+	get databaseNames(): Observable<string[]> {
+		return Observable.fromPromise(this._metadataService.getDatabaseNames(this._uri));
 	}
 }
 
@@ -95,13 +94,13 @@ export class SingleQueryManagementService {
 */
 @Injectable()
 export class CommonServiceInterface extends AngularDisposable {
-	protected _uri!: string;
+	protected _uri: string;
 
 	/* Special Services */
-	protected _singleMetadataService?: SingleConnectionMetadataService;
-	protected _singleConnectionManagementService?: SingleConnectionManagementService;
-	protected _singleAdminService?: SingleAdminService;
-	protected _singleQueryManagementService?: SingleQueryManagementService;
+	protected _singleMetadataService: SingleConnectionMetadataService;
+	protected _singleConnectionManagementService: SingleConnectionManagementService;
+	protected _singleAdminService: SingleAdminService;
+	protected _singleQueryManagementService: SingleQueryManagementService;
 	public scopedContextKeyService: IContextKeyService;
 
 	protected _connectionContextKey: ConnectionContextKey;
@@ -114,32 +113,31 @@ export class CommonServiceInterface extends AngularDisposable {
 		@Inject(IQueryManagementService) protected _queryManagementService: IQueryManagementService
 	) {
 		super();
-		this.scopedContextKeyService = this._params.scopedContextService;
-		this._connectionContextKey = this._params.connectionContextKey;
-		this.uri = this._params.ownerUri;
+		// during testing there may not be params
+		if (this._params) {
+			this.scopedContextKeyService = this._params.scopedContextService;
+			this._connectionContextKey = this._params.connectionContextKey;
+			this.uri = this._params.ownerUri;
+		}
 	}
 
 	public get metadataService(): SingleConnectionMetadataService {
-		return this._singleMetadataService!;
+		return this._singleMetadataService;
 	}
 
 	public get connectionManagementService(): SingleConnectionManagementService {
-		return this._singleConnectionManagementService!;
+		return this._singleConnectionManagementService;
 	}
 
 	public get adminService(): SingleAdminService {
-		return this._singleAdminService!;
+		return this._singleAdminService;
 	}
 
 	public get queryManagementService(): SingleQueryManagementService {
-		return this._singleQueryManagementService!;
+		return this._singleQueryManagementService;
 	}
 
-	/**
-	 * Set the uri for this instance, should only be set once
-	 * Inits all the services that depend on knowing a uri
-	 */
-	protected set uri(uri: string) {
+	protected setUri(uri: string) {
 		this._uri = uri;
 		this._singleMetadataService = new SingleConnectionMetadataService(this._metadataService, this._uri);
 		this._singleConnectionManagementService = new SingleConnectionManagementService(this._connectionManagementService, this._uri, this._connectionContextKey);
@@ -147,8 +145,16 @@ export class CommonServiceInterface extends AngularDisposable {
 		this._singleQueryManagementService = new SingleQueryManagementService(this._queryManagementService, this._uri);
 	}
 
+	/**
+	 * Set the uri for this instance, should only be set once
+	 * Inits all the services that depend on knowing a uri
+	 */
+	protected set uri(uri: string) {
+		this.setUri(uri);
+	}
+
 	protected get uri(): string {
-		return this._uri!;
+		return this._uri;
 	}
 
 	/**
@@ -156,7 +162,7 @@ export class CommonServiceInterface extends AngularDisposable {
 	 * In general don't use this, use specific services instances exposed publicly
 	 */
 	public getUnderlyingUri(): string {
-		return this._uri!;
+		return this._uri;
 	}
 
 	public getOriginalConnectionProfile(): IConnectionProfile {

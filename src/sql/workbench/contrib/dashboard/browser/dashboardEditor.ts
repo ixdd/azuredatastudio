@@ -4,28 +4,28 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as DOM from 'vs/base/browser/dom';
-import { EditorOptions, IEditorOpenContext } from 'vs/workbench/common/editor';
-import { EditorPane } from 'vs/workbench/browser/parts/editor/editorPane';
+import { EditorOptions } from 'vs/workbench/common/editor';
+import { BaseEditor } from 'vs/workbench/browser/parts/editor/baseEditor';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IWorkbenchThemeService } from 'vs/workbench/services/themes/common/workbenchThemeService';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
 
-import { DashboardInput } from 'sql/workbench/browser/editor/profiler/dashboardInput';
+import { DashboardInput } from './dashboardInput';
 import { DashboardModule } from './dashboard.module';
 import { bootstrapAngular } from 'sql/workbench/services/bootstrap/browser/bootstrapService';
 import { IDashboardComponentParams } from 'sql/workbench/services/bootstrap/common/bootstrapParams';
 import { DASHBOARD_SELECTOR } from 'sql/workbench/contrib/dashboard/browser/dashboard.component';
-import { ConnectionContextKey } from 'sql/workbench/services/connection/common/connectionContextKey';
+import { ConnectionContextKey } from 'sql/workbench/contrib/connection/common/connectionContextKey';
 import { IDashboardService } from 'sql/platform/dashboard/browser/dashboardService';
 import { ConnectionProfile } from 'sql/platform/connection/common/connectionProfile';
 import { IConnectionProfile } from 'sql/platform/connection/common/interfaces';
 import { IConnectionManagementService } from 'sql/platform/connection/common/connectionManagement';
 import { CancellationToken } from 'vs/base/common/cancellation';
 import { IStorageService } from 'vs/platform/storage/common/storage';
-import { IQueryManagementService } from 'sql/workbench/services/query/common/queryManagement';
+import { IQueryManagementService } from 'sql/platform/query/common/queryManagement';
 
-export class DashboardEditor extends EditorPane {
+export class DashboardEditor extends BaseEditor {
 
 	public static ID: string = 'workbench.editor.connectiondashboard';
 	private _dashboardContainer: HTMLElement;
@@ -77,14 +77,14 @@ export class DashboardEditor extends EditorPane {
 		this._dashboardService.layout(dimension);
 	}
 
-	public async setInput(input: DashboardInput, options: EditorOptions, context: IEditorOpenContext): Promise<void> {
+	public async setInput(input: DashboardInput, options: EditorOptions): Promise<void> {
 		if (this.input && this.input.matches(input)) {
 			return Promise.resolve(undefined);
 		}
 
 		const parentElement = this.getContainer();
 
-		super.setInput(input, options, context, CancellationToken.None);
+		super.setInput(input, options, CancellationToken.None);
 
 		DOM.clearNode(parentElement);
 
@@ -126,7 +126,7 @@ export class DashboardEditor extends EditorPane {
 
 		input.hasBootstrapped = true;
 
-		const uniqueSelector = this.instantiationService.invokeFunction(bootstrapAngular,
+		const uniqueSelector = bootstrapAngular(this.instantiationService,
 			DashboardModule,
 			this._dashboardContainer,
 			DASHBOARD_SELECTOR,

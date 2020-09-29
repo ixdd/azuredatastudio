@@ -15,25 +15,24 @@ import { DialogModule } from 'sql/workbench/services/dialog/browser/dialog.modul
 import { DialogComponentParams, LayoutRequestParams } from 'sql/workbench/services/dialog/browser/dialogContainer.component';
 
 import * as DOM from 'vs/base/browser/dom';
+import { IThemable } from 'vs/platform/theme/common/styler';
 import { Disposable } from 'vs/base/common/lifecycle';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { Emitter } from 'vs/base/common/event';
+import { attachTabbedPanelStyler } from 'sql/platform/theme/common/styler';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
-import { IThemable } from 'vs/base/common/styler';
-import { attachTabbedPanelStyler } from 'sql/workbench/common/styler';
-import { localize } from 'vs/nls';
 
 export class DialogPane extends Disposable implements IThemable {
-	private _tabbedPanel: TabbedPanel | undefined;
+	private _tabbedPanel: TabbedPanel;
 	private _moduleRefs: NgModuleRef<{}>[] = [];
 
 	// Validation
 	private _modelViewValidityMap = new Map<string, boolean>();
 
-	private _body!: HTMLElement;
+	private _body: HTMLElement;
 	private _selectedTabIndex: number = 0; //TODO: can be an option
 	private _onLayoutChange = new Emitter<LayoutRequestParams>();
-	private _selectedTabContent: string = '';
+	private _selectedTabContent: string;
 	public pageNumber?: number;
 
 	constructor(
@@ -46,10 +45,6 @@ export class DialogPane extends Disposable implements IThemable {
 		public description?: string,
 	) {
 		super();
-	}
-
-	public get pageNumberDisplayText(): string {
-		return localize('wizardPageNumberDisplayText', "Step {0}", this.pageNumber);
 	}
 
 	public createBody(container: HTMLElement): HTMLElement {
@@ -68,11 +63,11 @@ export class DialogPane extends Disposable implements IThemable {
 				tabContainer.style.display = 'none';
 				this._body.appendChild(tabContainer);
 				this.initializeModelViewContainer(tabContainer, tab.content, tab);
-				this._tabbedPanel!.onTabChange(e => {
-					tabContainer.style.height = (this.getTabDimension().height - this._tabbedPanel!.headersize) + 'px';
+				this._tabbedPanel.onTabChange(e => {
+					tabContainer.style.height = (this.getTabDimension().height - this._tabbedPanel.headersize) + 'px';
 					this._onLayoutChange.fire({ modelViewId: tab.content });
 				});
-				this._tabbedPanel!.pushTab({
+				this._tabbedPanel.pushTab({
 					title: tab.title,
 					identifier: 'dialogPane.' + this.title + '.' + tabIndex,
 					view: {
@@ -114,7 +109,7 @@ export class DialogPane extends Disposable implements IThemable {
 	 * Bootstrap angular for the dialog's model view controller with the given model view ID
 	 */
 	private initializeModelViewContainer(bodyContainer: HTMLElement, modelViewId: string, tab?: DialogTab) {
-		this._instantiationService.invokeFunction<void, any[]>(bootstrapAngular,
+		bootstrapAngular(this._instantiationService,
 			DialogModule,
 			bodyContainer,
 			'dialog-modelview-container',
@@ -130,7 +125,7 @@ export class DialogPane extends Disposable implements IThemable {
 				dialogPane: this
 			} as DialogComponentParams,
 			undefined,
-			(moduleRef: NgModuleRef<{}>) => {
+			(moduleRef) => {
 				return this._moduleRefs.push(moduleRef);
 			});
 	}
@@ -155,8 +150,8 @@ export class DialogPane extends Disposable implements IThemable {
 	 * Called by the theme registry on theme change to style the component
 	 */
 	public style(styles: IModalDialogStyles): void {
-		this._body.style.backgroundColor = styles.dialogBodyBackground ? styles.dialogBodyBackground.toString() : '';
-		this._body.style.color = styles.dialogForeground ? styles.dialogForeground.toString() : '';
+		this._body.style.backgroundColor = styles.dialogBodyBackground ? styles.dialogBodyBackground.toString() : undefined;
+		this._body.style.color = styles.dialogForeground ? styles.dialogForeground.toString() : undefined;
 	}
 
 	private _setValidity(modelViewId: string, valid: boolean) {

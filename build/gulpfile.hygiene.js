@@ -153,9 +153,15 @@ const copyrightFilter = [
 	'!extensions/mssql/src/hdfs/webhdfs.ts',
 	'!src/sql/workbench/contrib/notebook/browser/outputs/tableRenderers.ts',
 	'!src/sql/workbench/contrib/notebook/common/models/url.ts',
+<<<<<<< HEAD
 	'!src/sql/workbench/services/notebook/browser/outputs/renderMimeInterfaces.ts',
 	'!src/sql/workbench/contrib/notebook/browser/models/outputProcessor.ts',
 	'!src/sql/workbench/services/notebook/browser/outputs/mimemodel.ts',
+=======
+	'!src/sql/workbench/contrib/notebook/browser/models/renderMimeInterfaces.ts',
+	'!src/sql/workbench/contrib/notebook/browser/models/outputProcessor.ts',
+	'!src/sql/workbench/contrib/notebook/browser/models/mimemodel.ts',
+>>>>>>> origin/workbenchlinting
 	'!src/sql/workbench/contrib/notebook/browser/cellViews/media/*.css',
 	'!src/sql/base/browser/ui/table/plugins/rowSelectionModel.plugin.ts',
 	'!src/sql/base/browser/ui/table/plugins/rowDetailView.ts',
@@ -163,6 +169,7 @@ const copyrightFilter = [
 	'!src/sql/base/browser/ui/table/plugins/checkboxSelectColumn.plugin.ts',
 	'!src/sql/base/browser/ui/table/plugins/cellSelectionModel.plugin.ts',
 	'!src/sql/base/browser/ui/table/plugins/autoSizeColumns.plugin.ts',
+<<<<<<< HEAD
 	'!src/sql/workbench/services/notebook/browser/outputs/sanitizer.ts',
 	'!src/sql/workbench/contrib/notebook/browser/outputs/renderers.ts',
 	'!src/sql/workbench/services/notebook/browser/outputs/registry.ts',
@@ -172,6 +179,16 @@ const copyrightFilter = [
 	'!src/sql/workbench/browser/modelComponents/media/highlight.css',
 	'!src/sql/workbench/contrib/notebook/electron-browser/cellViews/media/highlight.css',
 	'!src/sql/workbench/contrib/notebook/browser/turndownPluginGfm.ts',
+=======
+	'!src/sql/workbench/contrib/notebook/browser/outputs/sanitizer.ts',
+	'!src/sql/workbench/contrib/notebook/browser/outputs/renderers.ts',
+	'!src/sql/workbench/contrib/notebook/browser/outputs/registry.ts',
+	'!src/sql/workbench/contrib/notebook/browser/outputs/factories.ts',
+	'!src/sql/workbench/contrib/notebook/common/models/nbformat.ts',
+	'!extensions/markdown-language-features/media/tomorrow.css',
+	'!src/sql/workbench/browser/modelComponents/media/highlight.css',
+	'!src/sql/workbench/contrib/notebook/electron-browser/cellViews/media/highlight.css',
+>>>>>>> origin/workbenchlinting
 	'!extensions/mssql/sqltoolsservice/**',
 	'!extensions/import/flatfileimportservice/**',
 	'!extensions/notebook/src/prompts/**',

@@ -15,6 +15,10 @@ import { INotebookService, INotebookProvider, INotebookManager } from 'sql/workb
 import { INotebookManagerDetails, INotebookSessionDetails, INotebookKernelDetails, FutureMessageType, INotebookFutureDetails, INotebookFutureDone } from 'sql/workbench/api/common/sqlExtHostTypes';
 import { LocalContentManager } from 'sql/workbench/services/notebook/common/localContentManager';
 import { Deferred } from 'sql/base/common/promise';
+<<<<<<< HEAD
+=======
+import { FutureInternal } from 'sql/workbench/contrib/notebook/browser/models/modelInterfaces';
+>>>>>>> origin/workbenchlinting
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import type { FutureInternal } from 'sql/workbench/services/notebook/browser/interfaces';
 

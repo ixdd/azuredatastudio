@@ -10,8 +10,15 @@ import { IObjectExplorerService } from 'sql/workbench/services/objectExplorer/br
 import { TestConnectionManagementService } from 'sql/platform/connection/test/common/testConnectionManagementService';
 import { IConnectionProfile } from 'sql/platform/connection/common/interfaces';
 import { ConnectionProfile } from 'sql/platform/connection/common/connectionProfile';
+<<<<<<< HEAD
 import { TestEditorService } from 'vs/workbench/test/browser/workbenchTestServices';
 import { assign } from 'vs/base/common/objects';
+=======
+import { URI } from 'vs/base/common/uri';
+import { UntitledEditorInput } from 'vs/workbench/common/editor/untitledEditorInput';
+import { QueryInput } from 'sql/workbench/contrib/query/common/queryInput';
+import { TestEditorService } from 'vs/workbench/test/workbenchTestServices';
+>>>>>>> origin/workbenchlinting
 
 suite('TaskUtilities', function () {
 	test('getCurrentGlobalConnection returns the selected OE server if a server or one of its children is selected', () => {

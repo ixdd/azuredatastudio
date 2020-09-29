@@ -5,12 +5,10 @@
 import { Type } from '@angular/core';
 
 import * as platform from 'vs/platform/registry/common/platform';
-import { ReadonlyJSONObject } from 'sql/workbench/services/notebook/common/jsonext';
-import { MimeModel } from 'sql/workbench/services/notebook/browser/outputs/mimemodel';
+import { ReadonlyJSONObject } from 'sql/workbench/contrib/notebook/common/models/jsonext';
+import { MimeModel } from 'sql/workbench/contrib/notebook/browser/models/mimemodel';
 import * as types from 'vs/base/common/types';
-import { ICellModel } from 'sql/workbench/services/notebook/browser/models/modelInterfaces';
-import { values } from 'vs/base/common/collections';
-import { nb } from 'azdata';
+import { ICellModel } from 'sql/workbench/contrib/notebook/browser/models/modelInterfaces';
 
 export type FactoryIdentifier = string;
 
@@ -22,10 +20,6 @@ export interface IMimeComponent {
 	bundleOptions: MimeModel.IOptions;
 	mimeType: string;
 	cellModel?: ICellModel;
-	cellOutput?: nb.ICellOutput;
-	batchId?: number;
-	id?: number;
-	queryRunnerUri?: string;
 	layout(): void;
 }
 
@@ -152,10 +146,10 @@ class MimeComponentRegistry implements IMimeComponentRegistry {
 
 	public getAllCtors(): Array<Type<IMimeComponent>> {
 		let addedCtors = [];
-		let ctors = values(this._componentDefinitions)
+		let ctors = Object.values(this._componentDefinitions)
 			.map((c: IMimeComponentDefinition) => c.ctor)
 			.filter(ctor => {
-				let shouldAdd = !addedCtors.some((ctor2) => ctor === ctor2);
+				let shouldAdd = !addedCtors.find((ctor2) => ctor === ctor2);
 				if (shouldAdd) {
 					addedCtors.push(ctor);
 				}

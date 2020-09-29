@@ -30,7 +30,6 @@ export class ConnectionStatusbarItem extends Disposable implements IWorkbenchCon
 		this.statusItem = this._register(
 			this.statusbarService.addEntry({
 				text: '',
-				ariaLabel: ''
 			},
 				ConnectionStatusbarItem.ID,
 				localize('status.connection.status', "Connection Status"),
@@ -85,7 +84,7 @@ export class ConnectionStatusbarItem extends Disposable implements IWorkbenchCon
 		}
 
 		this.statusItem.update({
-			text, ariaLabel: text, tooltip
+			text, tooltip
 		});
 	}
 }

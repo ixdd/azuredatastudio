@@ -13,11 +13,11 @@ import { TabChild } from 'sql/base/browser/ui/panel/tab.component';
 import { Table } from 'sql/base/browser/ui/table/table';
 import { AgentViewComponent } from 'sql/workbench/contrib/jobManagement/browser/agentView.component';
 import { RowDetailView } from 'sql/base/browser/ui/table/plugins/rowDetailView';
-import { NotebookCacheObject } from 'sql/workbench/services/jobManagement/common/jobManagementService';
-import { NewNotebookJobAction, RunJobAction, EditNotebookJobAction, JobsRefreshAction, IJobActionInfo, DeleteNotebookAction, OpenLatestRunMaterializedNotebook } from 'sql/workbench/contrib/jobManagement/browser/jobActions';
-import { JobManagementUtilities } from 'sql/workbench/services/jobManagement/browser/jobManagementUtilities';
+import { NotebookCacheObject } from 'sql/platform/jobManagement/common/jobManagementService';
+import { EditJobAction, NewNotebookJobAction, RunJobAction, EditNotebookJobAction, JobsRefreshAction, IJobActionInfo, DeleteNotebookAction, OpenLatestRunMaterializedNotebook } from 'sql/platform/jobManagement/browser/jobActions';
+import { JobManagementUtilities } from 'sql/platform/jobManagement/browser/jobManagementUtilities';
 import { HeaderFilter } from 'sql/base/browser/ui/table/plugins/headerFilter.plugin';
-import { IJobManagementService } from 'sql/workbench/services/jobManagement/common/interfaces';
+import { IJobManagementService } from 'sql/platform/jobManagement/common/interfaces';
 import { JobManagementView, JobActionContext } from 'sql/workbench/contrib/jobManagement/browser/jobManagementView';
 import { CommonServiceInterface } from 'sql/workbench/services/bootstrap/browser/commonServiceInterface.service';
 import { ICommandService } from 'vs/platform/commands/common/commands';
@@ -27,15 +27,12 @@ import { IAction } from 'vs/base/common/actions';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IDashboardService } from 'sql/platform/dashboard/browser/dashboardService';
 import { escape } from 'sql/base/common/strings';
-import { IWorkbenchThemeService } from 'vs/workbench/services/themes/common/workbenchThemeService';
+import { IWorkbenchThemeService, IColorTheme } from 'vs/workbench/services/themes/common/workbenchThemeService';
 import { tableBackground, cellBackground, cellBorderColor } from 'sql/platform/theme/common/colors';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import * as TelemetryKeys from 'sql/platform/telemetry/common/telemetryKeys';
 import { attachButtonStyler } from 'sql/platform/theme/common/styler';
 import { Taskbar } from 'sql/base/browser/ui/taskbar/taskbar';
-import { find } from 'vs/base/common/arrays';
-import { onUnexpectedError } from 'vs/base/common/errors';
-import { IColorTheme } from 'vs/platform/theme/common/themeService';
 
 
 export const NOTEBOOKSVIEW_SELECTOR: string = 'notebooksview-component';
@@ -81,7 +78,7 @@ export class NotebooksViewComponent extends JobManagementView implements OnInit,
 	private rowDetail: RowDetailView<IItem>;
 	private filterPlugin: any;
 	private dataView: any;
-	public _isCloud: boolean;
+	private _isCloud: boolean;
 	private filterStylingMap: { [columnName: string]: [any]; } = {};
 	private filterStack = ['start'];
 	private filterValueMap: { [columnName: string]: string[]; } = {};
@@ -99,6 +96,7 @@ export class NotebooksViewComponent extends JobManagementView implements OnInit,
 	constructor(
 		@Inject(forwardRef(() => CommonServiceInterface)) commonService: CommonServiceInterface,
 		@Inject(forwardRef(() => ChangeDetectorRef)) private _cd: ChangeDetectorRef,
+		@Inject(forwardRef(() => ElementRef)) private _el: ElementRef,
 		@Inject(forwardRef(() => AgentViewComponent)) _agentViewComponent: AgentViewComponent,
 		@Inject(IJobManagementService) private _jobManagementService: IJobManagementService,
 		@Inject(IWorkbenchThemeService) private _themeService: IWorkbenchThemeService,
@@ -319,7 +317,7 @@ export class NotebooksViewComponent extends JobManagementView implements OnInit,
 						this._table.grid.removeCellCssStyles('notebook-error-row' + i.toString());
 						let item = this.dataView.getItemByIdx(i);
 						// current filter
-						if (!!find(filterValues, x => x === item[args.column.field])) {
+						if (_.contains(filterValues, item[args.column.field])) {
 							// check all previous filters
 							if (this.checkPreviousFilters(item)) {
 								if (item.lastRunOutcome === 'Failed') {
@@ -409,14 +407,14 @@ export class NotebooksViewComponent extends JobManagementView implements OnInit,
 					break;
 				}
 			}
-			this.openLastNRun(targetNotebook, barId, 5).catch(onUnexpectedError);
+			this.openLastNRun(targetNotebook, barId, 5);
 			e.stopPropagation();
 		});
 
 		// cache the dataview for future use
 		this._notebookCacheObject.dataView = this.dataView;
 		this.filterValueMap['start'] = [[], this.dataView.getItems()];
-		this.loadJobHistories().catch(onUnexpectedError);
+		this.loadJobHistories();
 	}
 
 	private highlightErrorRows(e) {
@@ -584,7 +582,7 @@ export class NotebooksViewComponent extends JobManagementView implements OnInit,
 		this.rowDetail.applyTemplateNewLineHeight(item, true);
 	}
 
-	private async loadJobHistories(): Promise<void> {
+	private async loadJobHistories() {
 		if (this.notebooks) {
 			let ownerUri: string = this._commonService.connectionManagementService.connectionInfo.ownerUri;
 			let separatedJobs = this.separateFailingJobs();
@@ -592,7 +590,7 @@ export class NotebooksViewComponent extends JobManagementView implements OnInit,
 			// so they can be expanded quicker
 			let failing = separatedJobs[0];
 			let passing = separatedJobs[1];
-			await Promise.all([this.curateJobHistory(failing, ownerUri), this.curateJobHistory(passing, ownerUri)]);
+			Promise.all([this.curateJobHistory(failing, ownerUri), this.curateJobHistory(passing, ownerUri)]);
 		}
 	}
 
@@ -612,7 +610,7 @@ export class NotebooksViewComponent extends JobManagementView implements OnInit,
 	private checkPreviousFilters(item): boolean {
 		for (let column in this.filterValueMap) {
 			if (column !== 'start' && this.filterValueMap[column][0].length > 0) {
-				if (!find(this.filterValueMap[column][0], x => x === item[JobManagementUtilities.convertColNameToField(column)])) {
+				if (!_.contains(this.filterValueMap[column][0], item[JobManagementUtilities.convertColNameToField(column)])) {
 					return false;
 				}
 			}
@@ -731,7 +729,7 @@ export class NotebooksViewComponent extends JobManagementView implements OnInit,
 		// if the durations are all 0 secs, show minimal chart
 		// instead of nothing
 		if (zeroDurationJobCount === jobHistories.length) {
-			return new Array(jobHistories.length).fill('5px');
+			return Array(jobHistories.length).fill('5px');
 		} else {
 			return chartHeights;
 		}
@@ -771,9 +769,9 @@ export class NotebooksViewComponent extends JobManagementView implements OnInit,
 			let filterValues = col.filterValues;
 			if (filterValues && filterValues.length > 0) {
 				if (item._parent) {
-					value = value && find(filterValues, x => x === item._parent[col.field]);
+					value = value && _.contains(filterValues, item._parent[col.field]);
 				} else {
-					value = value && find(filterValues, x => x === item[col.field]);
+					value = value && _.contains(filterValues, item[col.field]);
 				}
 			}
 		}
@@ -899,6 +897,7 @@ export class NotebooksViewComponent extends JobManagementView implements OnInit,
 	}
 
 	protected getTableActions(targetObject: JobActionContext): IAction[] {
+		const editAction = this._instantiationService.createInstance(EditJobAction);
 		const editNotebookAction = this._instantiationService.createInstance(EditNotebookJobAction);
 		const runJobAction = this._instantiationService.createInstance(RunJobAction);
 		const openLatestRunAction = this._instantiationService.createInstance(OpenLatestRunMaterializedNotebook);

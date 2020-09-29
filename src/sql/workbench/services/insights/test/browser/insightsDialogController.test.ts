@@ -4,8 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { InsightsDialogController } from 'sql/workbench/services/insights/browser/insightsDialogController';
+<<<<<<< HEAD
 import QueryRunner from 'sql/workbench/services/query/common/queryRunner';
 import { IQueryMessage, BatchSummary, IColumn, ResultSetSubset } from 'sql/workbench/services/query/common/query';
+=======
+import QueryRunner from 'sql/platform/query/common/queryRunner';
+>>>>>>> origin/workbenchlinting
 import { ConnectionManagementService } from 'sql/workbench/services/connection/browser/connectionManagementService';
 import { IConnectionProfile } from 'sql/platform/connection/common/interfaces';
 

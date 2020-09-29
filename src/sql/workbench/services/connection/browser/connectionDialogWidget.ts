@@ -10,9 +10,20 @@ import { SelectBox } from 'sql/base/browser/ui/selectBox/selectBox';
 import { Modal } from 'sql/workbench/browser/modal/modal';
 import { IConnectionManagementService, INewConnectionParams } from 'sql/platform/connection/common/connectionManagement';
 import * as DialogHelper from 'sql/workbench/browser/modal/dialogHelper';
+<<<<<<< HEAD
 import { TreeCreationUtils } from 'sql/workbench/services/objectExplorer/browser/treeCreationUtils';
 import { TabbedPanel, PanelTabIdentifier } from 'sql/base/browser/ui/panel/panel';
 import * as TelemetryKeys from 'sql/platform/telemetry/common/telemetryKeys';
+=======
+import { TreeCreationUtils } from 'sql/workbench/contrib/objectExplorer/browser/treeCreationUtils';
+import { TreeUpdateUtils, IExpandableTree } from 'sql/workbench/contrib/objectExplorer/browser/treeUpdateUtils';
+import { ConnectionProfile } from 'sql/platform/connection/common/connectionProfile';
+import { TabbedPanel, PanelTabIdentifier } from 'sql/base/browser/ui/panel/panel';
+import { RecentConnectionTreeController, RecentConnectionActionsProvider } from 'sql/workbench/contrib/connection/browser/recentConnectionTreeController';
+import { SavedConnectionTreeController } from 'sql/workbench/contrib/connection/browser/savedConnectionTreeController';
+import * as TelemetryKeys from 'sql/platform/telemetry/common/telemetryKeys';
+import { ClearRecentConnectionsAction } from 'sql/workbench/contrib/connection/browser/connectionActions';
+>>>>>>> origin/workbenchlinting
 import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
 import { contrastBorder } from 'vs/platform/theme/common/colorRegistry';
 import { Event, Emitter } from 'vs/base/common/event';

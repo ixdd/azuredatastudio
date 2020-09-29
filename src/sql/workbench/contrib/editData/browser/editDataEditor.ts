@@ -7,21 +7,21 @@ import * as strings from 'vs/base/common/strings';
 import * as DOM from 'vs/base/browser/dom';
 import * as nls from 'vs/nls';
 
-import { EditorOptions, EditorInput, IEditorControl, IEditorPane, IEditorOpenContext } from 'vs/workbench/common/editor';
-import { EditorPane } from 'vs/workbench/browser/parts/editor/editorPane';
+import { EditorOptions, EditorInput, IEditorControl, IEditor } from 'vs/workbench/common/editor';
+import { BaseEditor } from 'vs/workbench/browser/parts/editor/baseEditor';
 
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
-import { PANEL_BORDER } from 'vs/workbench/common/theme';
 
-import { EditDataInput } from 'sql/workbench/browser/editData/editDataInput';
+import { EditDataInput } from 'sql/workbench/contrib/editData/browser/editDataInput';
 
 import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
 import * as queryContext from 'sql/workbench/contrib/query/common/queryContext';
 import { Taskbar, ITaskbarContent } from 'sql/base/browser/ui/taskbar/taskbar';
-import { IAction, IActionViewItem } from 'vs/base/common/actions';
-import { IQueryModelService } from 'sql/workbench/services/query/common/queryModel';
+import { IActionViewItem } from 'vs/base/browser/ui/actionbar/actionbar';
+import { Action } from 'vs/base/common/actions';
+import { IQueryModelService } from 'sql/platform/query/common/queryModel';
 import { IEditorDescriptorService } from 'sql/workbench/services/queryEditor/browser/editorDescriptorService';
 import {
 	RefreshTableAction, StopRefreshTableAction, ChangeMaxRowsAction, ChangeMaxRowsActionItem, ShowQueryPaneAction
@@ -29,24 +29,23 @@ import {
 import { TextResourceEditor } from 'vs/workbench/browser/parts/editor/textResourceEditor';
 import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
 import { IContextKey, IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
-import { UntitledTextEditorInput } from 'vs/workbench/services/untitled/common/untitledTextEditorInput';
+import { UntitledEditorInput } from 'vs/workbench/common/editor/untitledEditorInput';
 import { IFlexibleSash, HorizontalFlexibleSash } from 'sql/workbench/contrib/query/browser/flexibleSash';
 import { EditDataResultsEditor } from 'sql/workbench/contrib/editData/browser/editDataResultsEditor';
-import { EditDataResultsInput } from 'sql/workbench/browser/editData/editDataResultsInput';
+import { EditDataResultsInput } from 'sql/workbench/contrib/editData/browser/editDataResultsInput';
 import { CancellationToken } from 'vs/base/common/cancellation';
 import { IStorageService } from 'vs/platform/storage/common/storage';
 import { IEditorGroup } from 'vs/workbench/services/editor/common/editorGroupsService';
-import { onUnexpectedError } from 'vs/base/common/errors';
 
 /**
  * Editor that hosts an action bar and a resultSetInput for an edit data session
  */
-export class EditDataEditor extends EditorPane {
+export class EditDataEditor extends BaseEditor {
 
 	public static ID: string = 'workbench.editor.editDataEditor';
 
 	// The minimum width/height of the editors hosted in the QueryEditor
-	private readonly _minEditorSize: number = 55;
+	private readonly _minEditorSize: number = 220;
 
 	private _sash: IFlexibleSash;
 	private _dimension: DOM.Dimension;
@@ -87,13 +86,11 @@ export class EditDataEditor extends EditorPane {
 		}
 
 		if (_editorService) {
-			_editorService.overrideOpenEditor({
-				open: (editor, options, group) => {
-					if (this.isVisible() && (editor !== this.input || group !== this.group)) {
-						this.saveEditorViewState();
-					}
-					return {};
+			_editorService.overrideOpenEditor((editor, options, group) => {
+				if (this.isVisible() && (editor !== this.input || group !== this.group)) {
+					this.saveEditorViewState();
 				}
+				return {};
 			});
 		}
 	}
@@ -122,6 +119,10 @@ export class EditDataEditor extends EditorPane {
 		}
 		this._disposeEditors();
 		super.clearInput();
+	}
+
+	public close(): void {
+		this.editDataInput.close();
 	}
 
 	/**
@@ -213,7 +214,7 @@ export class EditDataEditor extends EditorPane {
 	/**
 	 * Sets the input data for this editor.
 	 */
-	public setInput(newInput: EditDataInput, options?: EditorOptions, context?: IEditorOpenContext): Promise<void> {
+	public setInput(newInput: EditDataInput, options?: EditorOptions): Promise<void> {
 		let oldInput = <EditDataInput>this.input;
 		if (!newInput.setup) {
 			this._initialized = false;
@@ -224,7 +225,7 @@ export class EditDataEditor extends EditorPane {
 			newInput.setupComplete();
 		}
 
-		return super.setInput(newInput, options, context, CancellationToken.None)
+		return super.setInput(newInput, options, CancellationToken.None)
 			.then(() => this._updateInput(oldInput, newInput, options));
 	}
 
@@ -251,7 +252,7 @@ export class EditDataEditor extends EditorPane {
 	}
 
 	// PRIVATE METHODS ////////////////////////////////////////////////////////////
-	private _createEditor(editorInput: EditorInput, container: HTMLElement): Promise<EditorPane> {
+	private _createEditor(editorInput: EditorInput, container: HTMLElement): Promise<BaseEditor> {
 		const descriptor = this._editorDescriptorService.getEditor(editorInput);
 		if (!descriptor) {
 			return Promise.reject(new Error(strings.format('Can not find a registered editor for the input {0}', editorInput)));
@@ -277,11 +278,10 @@ export class EditDataEditor extends EditorPane {
 		if (!input.results.container) {
 			this._resultsEditorContainer = DOM.append(parentElement, DOM.$('.editDataContainer-horizontal'));
 
-			input.results.setContainer(this._resultsEditorContainer);
+			input.results.container = this._resultsEditorContainer;
 		} else {
 			this._resultsEditorContainer = DOM.append(parentElement, input.results.container);
 		}
-		this.updateStyles();
 	}
 
 	/**
@@ -300,14 +300,6 @@ export class EditDataEditor extends EditorPane {
 		this._sash.show();
 	}
 
-
-	updateStyles() {
-		if (this._resultsEditorContainer) {
-			this._resultsEditorContainer.style.borderTopColor = this.getColor(PANEL_BORDER);
-		}
-		super.updateStyles();
-	}
-
 	/**
 	 * Appends the HTML for the SQL editor. Creates new HTML every time.
 	 */
@@ -320,7 +312,7 @@ export class EditDataEditor extends EditorPane {
 		// Create QueryTaskbar
 		this._taskbarContainer = DOM.append(parentElement, DOM.$('div'));
 		this._taskbar = new Taskbar(this._taskbarContainer, {
-			actionViewItemProvider: (action: IAction) => this._getChangeMaxRowsAction(action)
+			actionViewItemProvider: (action: Action) => this._getChangeMaxRowsAction(action)
 		});
 
 		// Create Actions for the toolbar
@@ -351,7 +343,7 @@ export class EditDataEditor extends EditorPane {
 	/**
 	 * Gets the IActionItem for the list of row number drop down
 	 */
-	private _getChangeMaxRowsAction(action: IAction): IActionViewItem {
+	private _getChangeMaxRowsAction(action: Action): IActionViewItem {
 		let actionID = ChangeMaxRowsAction.ID;
 		if (action.id === actionID) {
 			if (!this._changeMaxRowsActionItem) {
@@ -493,15 +485,15 @@ export class EditDataEditor extends EditorPane {
 	 */
 	private _onResultsEditorCreated(resultsEditor: EditDataResultsEditor, resultsInput: EditDataResultsInput, options: EditorOptions): Promise<void> {
 		this._resultsEditor = resultsEditor;
-		return this._resultsEditor.setInput(resultsInput, options, undefined);
+		return this._resultsEditor.setInput(resultsInput, options);
 	}
 
 	/**
 	 * Sets input for the SQL editor after it has been created.
 	 */
-	private _onSqlEditorCreated(sqlEditor: TextResourceEditor, sqlInput: UntitledTextEditorInput, options: EditorOptions): Thenable<void> {
+	private _onSqlEditorCreated(sqlEditor: TextResourceEditor, sqlInput: UntitledEditorInput, options: EditorOptions): Thenable<void> {
 		this._sqlEditor = sqlEditor;
-		return this._sqlEditor.setInput(sqlInput, options, undefined, CancellationToken.None);
+		return this._sqlEditor.setInput(sqlInput, options, CancellationToken.None);
 	}
 
 	private _resizeGridContents(): void {
@@ -530,10 +522,10 @@ export class EditDataEditor extends EditorPane {
 			createEditors = () => {
 				return Promise.all([
 					this._createEditor(<EditDataResultsInput>newInput.results, this._resultsEditorContainer),
-					this._createEditor(<UntitledTextEditorInput>newInput.sql, this._sqlEditorContainer)
+					this._createEditor(<UntitledEditorInput>newInput.sql, this._sqlEditorContainer)
 				]);
 			};
-			onEditorsCreated = (result: IEditorPane[]) => {
+			onEditorsCreated = (result: IEditor[]) => {
 				return Promise.all([
 					this._onResultsEditorCreated(<EditDataResultsEditor>result[0], newInput.results, options),
 					this._onSqlEditorCreated(<TextResourceEditor>result[1], newInput.sql, options)
@@ -543,7 +535,7 @@ export class EditDataEditor extends EditorPane {
 			// If only the sql editor exists, create a promise and wait for the sql editor to be created
 		} else {
 			createEditors = () => {
-				return this._createEditor(<UntitledTextEditorInput>newInput.sql, this._sqlEditorContainer);
+				return this._createEditor(<UntitledEditorInput>newInput.sql, this._sqlEditorContainer);
 			};
 			onEditorsCreated = (result: TextResourceEditor) => {
 				return Promise.all([
@@ -576,7 +568,7 @@ export class EditDataEditor extends EditorPane {
 		if (!this._dimension) {
 			return;
 		}
-		this._sash.setDimension(this._dimension);
+		this._sash.setDimenesion(this._dimension);
 	}
 
 	/**
@@ -593,12 +585,12 @@ export class EditDataEditor extends EditorPane {
 		this._createResultsEditorContainer();
 
 		this._createEditor(<EditDataResultsInput>input.results, this._resultsEditorContainer)
-			.then(async result => {
-				await this._onResultsEditorCreated(<EditDataResultsEditor>result, input.results, this._options);
+			.then(result => {
+				this._onResultsEditorCreated(<EditDataResultsEditor>result, input.results, this.options);
 				this.resultsEditorVisibility = true;
 				this.hideQueryResultsView = false;
 				this._doLayout(true);
-			}).catch(onUnexpectedError);
+			});
 	}
 
 	/**
@@ -630,24 +622,10 @@ export class EditDataEditor extends EditorPane {
 			} else {
 				this._sash.hide();
 			}
-			this.updateSashVisibility();
 		}
 
 		this._updateTaskbar(newInput);
 		return this._setNewInput(newInput, options);
-	}
-
-	private updateSashVisibility(): void {
-		// change the visibility of the sash.
-		if (this._resultsEditorContainer) {
-			if (this.queryPaneEnabled()) {
-				this._resultsEditorContainer.style.borderTopStyle = 'solid';
-				this._resultsEditorContainer.style.borderTopWidth = '1px';
-			} else {
-				this._resultsEditorContainer.style.borderTopStyle = '';
-				this._resultsEditorContainer.style.borderTopWidth = '';
-			}
-		}
 	}
 
 	private _updateQueryEditorVisible(currentEditorIsVisible: boolean): void {
@@ -655,7 +633,7 @@ export class EditDataEditor extends EditorPane {
 			let visible = currentEditorIsVisible;
 			if (!currentEditorIsVisible) {
 				// Current editor is closing but still tracked as visible. Check if any other editor is visible
-				const candidates = [...this._editorService.visibleEditorPanes].filter(e => {
+				const candidates = [...this._editorService.visibleControls].filter(e => {
 					if (e && e.getId) {
 						return e.getId() === EditDataEditor.ID;
 					}
@@ -680,13 +658,6 @@ export class EditDataEditor extends EditorPane {
 	}
 
 	/**
-	 * Calls the run method of this editor's showQueryPaneAction
-	 */
-	public runShowQueryPane(): void {
-		this._showQueryPaneAction.run();
-	}
-
-	/**
 	 * Calls the run method of this editor's RunQueryAction
 	 */
 	public runQuery(): void {
@@ -702,11 +673,9 @@ export class EditDataEditor extends EditorPane {
 
 	public toggleQueryPane(): void {
 		this.editDataInput.queryPaneEnabled = !this.queryPaneEnabled();
-		this.updateSashVisibility();
 		if (this.queryPaneEnabled()) {
 			this._showQueryEditor();
-		}
-		else {
+		} else {
 			this._hideQueryEditor();
 		}
 		this._doLayout(false);

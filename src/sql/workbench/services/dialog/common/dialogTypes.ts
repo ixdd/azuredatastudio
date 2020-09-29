@@ -6,7 +6,7 @@
 import * as azdata from 'azdata';
 import { localize } from 'vs/nls';
 import { Event, Emitter } from 'vs/base/common/event';
-import { DialogMessage, DialogWidth } from 'sql/workbench/api/common/sqlExtHostTypes';
+import { DialogMessage } from 'sql/workbench/api/common/sqlExtHostTypes';
 
 export class ModelViewPane {
 	private _valid: boolean = true;
@@ -26,7 +26,7 @@ export class ModelViewPane {
 }
 
 export class DialogTab extends ModelViewPane {
-	public content: string = '';
+	public content: string;
 
 	constructor(public title: string, content?: string) {
 		super();
@@ -36,38 +36,37 @@ export class DialogTab extends ModelViewPane {
 	}
 }
 
-export type CloseValidator = () => boolean | Thenable<boolean>;
-
 export class Dialog extends ModelViewPane {
 	private static readonly DONE_BUTTON_LABEL = localize('dialogModalDoneButtonLabel', "Done");
 	private static readonly CANCEL_BUTTON_LABEL = localize('dialogModalCancelButtonLabel', "Cancel");
 
-	public content: string | DialogTab[] = '';
+	public content: string | DialogTab[];
+	public isWide: boolean;
 	public okButton: DialogButton = new DialogButton(Dialog.DONE_BUTTON_LABEL, true);
 	public cancelButton: DialogButton = new DialogButton(Dialog.CANCEL_BUTTON_LABEL, true);
-	public customButtons: DialogButton[] = [];
-	private _onMessageChange = new Emitter<DialogMessage | undefined>();
+	public customButtons: DialogButton[];
+	private _onMessageChange = new Emitter<DialogMessage>();
 	public readonly onMessageChange = this._onMessageChange.event;
-	private _message: DialogMessage | undefined;
-	private _closeValidator: CloseValidator | undefined;
+	private _message: DialogMessage;
+	private _closeValidator: () => boolean | Thenable<boolean>;
 
-	constructor(public title: string, public width: DialogWidth, content?: string | DialogTab[]) {
+	constructor(public title: string, content?: string | DialogTab[]) {
 		super();
 		if (content) {
 			this.content = content;
 		}
 	}
 
-	public get message(): DialogMessage | undefined {
+	public get message(): DialogMessage {
 		return this._message;
 	}
 
-	public set message(value: DialogMessage | undefined) {
+	public set message(value: DialogMessage) {
 		this._message = value;
 		this._onMessageChange.fire(this._message);
 	}
 
-	public registerCloseValidator(validator: CloseValidator): void {
+	public registerCloseValidator(validator: () => boolean | Thenable<boolean>): void {
 		this._closeValidator = validator;
 	}
 
@@ -84,7 +83,7 @@ export class DialogButton implements azdata.window.Button {
 	private _label: string;
 	private _enabled: boolean;
 	private _hidden: boolean;
-	private _focused: boolean | undefined;
+	private _focused: boolean;
 	private _position?: azdata.window.DialogButtonPosition;
 	private _onClick: Emitter<void> = new Emitter<void>();
 	public readonly onClick: Event<void> = this._onClick.event;
@@ -124,11 +123,11 @@ export class DialogButton implements azdata.window.Button {
 		this._onUpdate.fire();
 	}
 
-	public get focused(): boolean | undefined {
+	public get focused(): boolean {
 		return this._focused;
 	}
 
-	public set focused(focused: boolean | undefined) {
+	public set focused(focused: boolean) {
 		this._focused = focused;
 		this._onUpdate.fire();
 	}
@@ -151,9 +150,9 @@ export class DialogButton implements azdata.window.Button {
 }
 
 export class WizardPage extends DialogTab {
-	public customButtons: DialogButton[] = [];
-	private _enabled: boolean = false;
-	private _description: string | undefined;
+	public customButtons: DialogButton[];
+	private _enabled: boolean;
+	private _description: string;
 	private _onUpdate: Emitter<void> = new Emitter<void>();
 	public readonly onUpdate: Event<void> = this._onUpdate.event;
 
@@ -170,42 +169,38 @@ export class WizardPage extends DialogTab {
 		this._onUpdate.fire();
 	}
 
-	public get description(): string | undefined {
+	public get description(): string {
 		return this._description;
 	}
 
-	public set description(description: string | undefined) {
+	public set description(description: string) {
 		this._description = description;
 		this._onUpdate.fire();
 	}
 }
 
-export type NavigationValidator = (pageChangeInfo: azdata.window.WizardPageChangeInfo) => boolean | Thenable<boolean>;
-
 export class Wizard {
-	public pages: WizardPage[] = [];
-	public customButtons: DialogButton[] = [];
-	private _currentPage: number = -1;
+	public pages: WizardPage[];
+	public nextButton: DialogButton;
+	public backButton: DialogButton;
+	public generateScriptButton: DialogButton;
+	public doneButton: DialogButton;
+	public cancelButton: DialogButton;
+	public customButtons: DialogButton[];
+	private _currentPage: number;
 	private _pageChangedEmitter = new Emitter<azdata.window.WizardPageChangeInfo>();
 	public readonly onPageChanged = this._pageChangedEmitter.event;
 	private _pageAddedEmitter = new Emitter<WizardPage>();
 	public readonly onPageAdded = this._pageAddedEmitter.event;
 	private _pageRemovedEmitter = new Emitter<WizardPage>();
 	public readonly onPageRemoved = this._pageRemovedEmitter.event;
-	private _navigationValidator: NavigationValidator | undefined;
-	private _onMessageChange = new Emitter<DialogMessage | undefined>();
+	private _navigationValidator: (pageChangeInfo: azdata.window.WizardPageChangeInfo) => boolean | Thenable<boolean>;
+	private _onMessageChange = new Emitter<DialogMessage>();
 	public readonly onMessageChange = this._onMessageChange.event;
-	private _message: DialogMessage | undefined;
-	public displayPageTitles: boolean = false;
-	public width: DialogWidth | undefined;
+	private _message: DialogMessage;
+	public displayPageTitles: boolean;
 
-	constructor(public title: string,
-		public readonly name: string,
-		public doneButton: DialogButton,
-		public cancelButton: DialogButton,
-		public nextButton: DialogButton,
-		public backButton: DialogButton,
-		public generateScriptButton: DialogButton) { }
+	constructor(public title: string) { }
 
 	public get currentPage(): number {
 		return this._currentPage;
@@ -257,7 +252,7 @@ export class Wizard {
 		this._pageRemovedEmitter.fire(removedPage);
 	}
 
-	public registerNavigationValidator(validator: NavigationValidator): void {
+	public registerNavigationValidator(validator: (pageChangeInfo: azdata.window.WizardPageChangeInfo) => boolean | Thenable<boolean>): void {
 		this._navigationValidator = validator;
 	}
 
@@ -272,11 +267,11 @@ export class Wizard {
 		}
 	}
 
-	public get message(): DialogMessage | undefined {
+	public get message(): DialogMessage {
 		return this._message;
 	}
 
-	public set message(value: DialogMessage | undefined) {
+	public set message(value: DialogMessage) {
 		this._message = value;
 		this._onMessageChange.fire(this._message);
 	}

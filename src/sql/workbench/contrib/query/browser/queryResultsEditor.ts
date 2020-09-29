@@ -3,10 +3,10 @@
  *  Licensed under the Source EULA. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { EditorOptions, IEditorOpenContext } from 'vs/workbench/common/editor';
+import { EditorOptions } from 'vs/workbench/common/editor';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { RawContextKey } from 'vs/platform/contextkey/common/contextkey';
-import { EditorPane } from 'vs/workbench/browser/parts/editor/editorPane';
+import { BaseEditor } from 'vs/workbench/browser/parts/editor/baseEditor';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { BareFontInfo } from 'vs/editor/common/config/fontInfo';
 import { getZoomLevel } from 'vs/base/browser/browser';
@@ -15,11 +15,11 @@ import * as DOM from 'vs/base/browser/dom';
 import * as types from 'vs/base/common/types';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 
-import { QueryResultsInput } from 'sql/workbench/common/editor/query/queryResultsInput';
+import { QueryResultsInput } from 'sql/workbench/contrib/query/common/queryResultsInput';
 import { QueryResultsView } from 'sql/workbench/contrib/query/browser/queryResultsView';
 import { CancellationToken } from 'vs/base/common/cancellation';
 import { IStorageService } from 'vs/platform/storage/common/storage';
-import { RESULTS_GRID_DEFAULTS } from 'sql/workbench/contrib/query/common/resultsGrid.contribution';
+import { RESULTS_GRID_DEFAULTS } from 'sql/workbench/contrib/query/common/resultsGridContribution';
 
 export const TextCompareEditorVisible = new RawContextKey<boolean>('textCompareEditorVisible', false);
 
@@ -71,9 +71,10 @@ export function getBareResultsGridInfoStyles(info: BareResultsGridInfo): string 
 /**
  * Editor associated with viewing and editing the data of a query results grid.
  */
-export class QueryResultsEditor extends EditorPane {
+export class QueryResultsEditor extends BaseEditor {
 
 	public static ID: string = 'workbench.editor.queryResultsEditor';
+	public static AngularSelectorString: string = 'slickgrid-container.slickgridContainer';
 	protected _rawOptions: BareResultsGridInfo;
 
 	private resultsView: QueryResultsView;
@@ -131,8 +132,8 @@ export class QueryResultsEditor extends EditorPane {
 		this.resultsView.layout(dimension);
 	}
 
-	setInput(input: QueryResultsInput, options: EditorOptions, context: IEditorOpenContext): Promise<void> {
-		super.setInput(input, options, context, CancellationToken.None);
+	setInput(input: QueryResultsInput, options: EditorOptions): Promise<void> {
+		super.setInput(input, options, CancellationToken.None);
 		this.resultsView.input = input;
 		return Promise.resolve<void>(null);
 	}

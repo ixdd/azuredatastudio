@@ -11,6 +11,7 @@ import { ConnectionProfile } from 'sql/platform/connection/common/connectionProf
 import { IConnectionProfile } from 'sql/platform/connection/common/interfaces';
 import { ConnectionManagementInfo } from 'sql/platform/connection/common/connectionManagementInfo';
 import { ConnectionProviderProperties } from 'sql/platform/capabilities/common/capabilitiesService';
+<<<<<<< HEAD
 
 /**
  * A range in the editor. This interface is suitable for serialization.
@@ -33,6 +34,8 @@ export interface IRange {
 	 */
 	readonly endColumn: number;
 }
+=======
+>>>>>>> origin/workbenchlinting
 
 /**
  * Options for the actions that could happen after connecting is complete

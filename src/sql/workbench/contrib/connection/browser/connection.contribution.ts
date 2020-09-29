@@ -5,8 +5,8 @@
 
 import { IConfigurationRegistry, Extensions as ConfigExtensions } from 'vs/platform/configuration/common/configurationRegistry';
 import { Registry } from 'vs/platform/registry/common/platform';
-import { AddServerGroupAction, AddServerAction } from 'sql/workbench/services/objectExplorer/browser/connectionTreeAction';
-import { ClearRecentConnectionsAction, GetCurrentConnectionStringAction } from 'sql/workbench/services/connection/browser/connectionActions';
+import { AddServerGroupAction, AddServerAction } from 'sql/workbench/contrib/objectExplorer/browser/connectionTreeAction';
+import { ClearRecentConnectionsAction, GetCurrentConnectionStringAction } from 'sql/workbench/contrib/connection/browser/connectionActions';
 import * as azdata from 'azdata';
 import { IWorkbenchActionRegistry, Extensions } from 'vs/workbench/common/actions';
 import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
@@ -31,7 +31,7 @@ const actionRegistry = <IWorkbenchActionRegistry>Registry.as(Extensions.Workbenc
 
 // Connection Actions
 actionRegistry.registerWorkbenchAction(
-	SyncActionDescriptor.create(
+	new SyncActionDescriptor(
 		ClearRecentConnectionsAction,
 		ClearRecentConnectionsAction.ID,
 		ClearRecentConnectionsAction.LABEL
@@ -40,7 +40,7 @@ actionRegistry.registerWorkbenchAction(
 );
 
 actionRegistry.registerWorkbenchAction(
-	SyncActionDescriptor.create(
+	new SyncActionDescriptor(
 		AddServerGroupAction,
 		AddServerGroupAction.ID,
 		AddServerGroupAction.LABEL
@@ -49,7 +49,7 @@ actionRegistry.registerWorkbenchAction(
 );
 
 actionRegistry.registerWorkbenchAction(
-	SyncActionDescriptor.create(
+	new SyncActionDescriptor(
 		AddServerAction,
 		AddServerAction.ID,
 		AddServerAction.LABEL
@@ -102,7 +102,7 @@ CommandsRegistry.registerCommand('azdata.connect',
 	});
 
 actionRegistry.registerWorkbenchAction(
-	SyncActionDescriptor.create(
+	new SyncActionDescriptor(
 		GetCurrentConnectionStringAction,
 		GetCurrentConnectionStringAction.ID,
 		GetCurrentConnectionStringAction.LABEL
@@ -123,18 +123,13 @@ configurationRegistry.registerConfiguration({
 		},
 		'sql.defaultEngine': {
 			'type': 'string',
-			'description': localize('sql.defaultEngineDescription', "Default SQL Engine to use. This drives default language provider in .sql files and the default to use when creating a new connection."),
+			'description': localize('sql.defaultEngineDescription', "Default SQL Engine to use. This drives default language provider in .sql files and the default to use when creating a new connection. Valid option is currently MSSQL"),
 			'default': 'MSSQL'
 		},
 		'connection.parseClipboardForConnectionString': {
 			'type': 'boolean',
 			'default': true,
 			'description': localize('connection.parseClipboardForConnectionStringDescription', "Attempt to parse the contents of the clipboard when the connection dialog is opened or a paste is performed.")
-		},
-		'connection.dialog.browse': {
-			'type': 'boolean',
-			'default': false,
-			'description': localize('connection.dialog.browse', "(Experimental) Show the browser tab in the connection dialog for discovering new connections")
 		}
 	}
 });

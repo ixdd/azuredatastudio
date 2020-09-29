@@ -17,9 +17,14 @@ export enum Orientation {
 	Vertical = 'vertical'
 }
 
+<<<<<<< HEAD
 export interface ToolbarLayout {
 	orientation: Orientation;
 }
+=======
+import { ContainerBase } from 'sql/workbench/browser/modelComponents/componentBase';
+import { CommonServiceInterface } from 'sql/workbench/services/bootstrap/browser/commonServiceInterface.service';
+>>>>>>> origin/workbenchlinting
 
 export interface ToolbarItemConfig {
 	title?: string;

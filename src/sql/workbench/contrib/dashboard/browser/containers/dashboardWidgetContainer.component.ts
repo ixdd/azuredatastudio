@@ -5,7 +5,7 @@
 
 import 'vs/css!./dashboardWidgetContainer';
 
-import { Component, Inject, Input, forwardRef, ViewChild, ChangeDetectorRef, AfterContentInit } from '@angular/core';
+import { Component, Inject, Input, forwardRef, ViewChild, OnDestroy, ChangeDetectorRef, AfterContentInit } from '@angular/core';
 
 import { TabConfig, WidgetConfig } from 'sql/workbench/contrib/dashboard/browser/core/dashboardWidget';
 import { DashboardTab } from 'sql/workbench/contrib/dashboard/browser/core/interfaces';
@@ -13,7 +13,6 @@ import { WidgetContent } from 'sql/workbench/contrib/dashboard/browser/contents/
 import { TabChild } from 'sql/base/browser/ui/panel/tab.component';
 
 import { Event, Emitter } from 'vs/base/common/event';
-import { values } from 'vs/base/common/collections';
 
 @Component({
 	selector: 'dashboard-widget-container',
@@ -23,7 +22,7 @@ import { values } from 'vs/base/common/collections';
 		</widget-content>
 	`
 })
-export class DashboardWidgetContainer extends DashboardTab implements AfterContentInit {
+export class DashboardWidgetContainer extends DashboardTab implements OnDestroy, AfterContentInit {
 	@Input() protected tab: TabConfig;
 	protected widgets: WidgetConfig[];
 	private _onResize = new Emitter<void>();
@@ -39,7 +38,7 @@ export class DashboardWidgetContainer extends DashboardTab implements AfterConte
 
 	ngOnInit() {
 		if (this.tab.container) {
-			this.widgets = values(this.tab.container)[0];
+			this.widgets = Object.values(this.tab.container)[0];
 			this._cd.detectChanges();
 		}
 	}
@@ -48,6 +47,10 @@ export class DashboardWidgetContainer extends DashboardTab implements AfterConte
 		this._register(this._widgetContent.onResize(() => {
 			this._onResize.fire();
 		}));
+	}
+
+	ngOnDestroy() {
+		this.dispose();
 	}
 
 	public get id(): string {

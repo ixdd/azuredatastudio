@@ -6,8 +6,3 @@
 .query-editor-view {
 	width: 100%;
 }
-
-.query-editor-view .monaco-action-bar .action-item .codicon {
-	display: inline-block;
-	align-items: stretch;
-}

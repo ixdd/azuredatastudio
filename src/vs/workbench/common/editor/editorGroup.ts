@@ -10,7 +10,17 @@ import { IConfigurationService } from 'vs/platform/configuration/common/configur
 import { dispose, Disposable, DisposableStore } from 'vs/base/common/lifecycle';
 import { Registry } from 'vs/platform/registry/common/platform';
 import { coalesce } from 'vs/base/common/arrays';
+<<<<<<< HEAD
 import { doHandleUpgrade } from 'sql/workbench/services/languageAssociation/common/doHandleUpgrade';
+=======
+
+// {{SQL CARBON EDIT}}
+import { QueryInput } from 'sql/workbench/contrib/query/common/queryInput';
+import { UntitledEditorInput } from 'vs/workbench/common/editor/untitledEditorInput';
+import * as CustomInputConverter from 'sql/workbench/browser/customInputConverter';
+import { NotebookInput } from 'sql/workbench/contrib/notebook/browser/models/notebookInput';
+import { FileEditorInput } from 'vs/workbench/contrib/files/common/editors/fileEditorInput';
+>>>>>>> origin/workbenchlinting
 
 const EditorOpenPositioning = {
 	LEFT: 'left',

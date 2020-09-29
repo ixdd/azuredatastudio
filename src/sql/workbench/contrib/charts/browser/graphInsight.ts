@@ -3,22 +3,20 @@
  *  Licensed under the Source EULA. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as chartjs from 'chart.js';
+import { Chart as ChartJs } from 'chart.js';
 
 import { mixin } from 'sql/base/common/objects';
 import { localize } from 'vs/nls';
 import * as colors from 'vs/platform/theme/common/colorRegistry';
 import { editorLineNumbers } from 'vs/editor/common/view/editorColorRegistry';
-import { IThemeService, IColorTheme } from 'vs/platform/theme/common/themeService';
+import { IThemeService, ITheme } from 'vs/platform/theme/common/themeService';
 
-import { IInsight, IPointDataSet, customMixin } from './interfaces';
+import { IInsight, IInsightData, IPointDataSet, customMixin } from './interfaces';
 import { IInsightOptions, DataDirection, ChartType, LegendPosition, DataType } from 'sql/workbench/contrib/charts/common/interfaces';
-import { values } from 'vs/base/common/collections';
-import { IInsightData } from 'sql/platform/dashboard/browser/insightRegistry';
 
 const noneLineGraphs = [ChartType.Doughnut, ChartType.Pie];
 
-const timeSeriesScales: chartjs.ChartOptions = {
+const timeSeriesScales: ChartJs.ChartOptions = {
 	scales: {
 		xAxes: [{
 			type: 'time',
@@ -42,28 +40,26 @@ const defaultOptions: IInsightOptions = {
 };
 
 export class Graph implements IInsight {
-	private _options: IInsightOptions = { type: ChartType.Bar };
+	private _options: IInsightOptions;
 	private canvas: HTMLCanvasElement;
-	private chartjs?: chartjs;
-	private _data?: IInsightData;
+	private chartjs: ChartJs;
+	private _data: IInsightData;
 
-	private originalType?: ChartType;
+	private originalType: ChartType;
 
 	public static readonly types = [ChartType.Bar, ChartType.Doughnut, ChartType.HorizontalBar, ChartType.Line, ChartType.Pie, ChartType.Scatter, ChartType.TimeSeries];
 	public readonly types = Graph.types;
 
-	private _theme: IColorTheme;
+	private _theme: ITheme;
 
 	constructor(
 		container: HTMLElement, options: IInsightOptions = defaultOptions,
 		@IThemeService themeService: IThemeService
 	) {
-		this._theme = themeService.getColorTheme();
-		themeService.onDidColorThemeChange(e => {
+		this._theme = themeService.getTheme();
+		themeService.onThemeChange(e => {
 			this._theme = e;
-			if (this._data) {
-				this.data = this._data;
-			}
+			this.data = this._data;
 		});
 		this.options = mixin(options, defaultOptions, false);
 
@@ -85,8 +81,8 @@ export class Graph implements IInsight {
 
 	}
 
-	public getCanvasData(): string | undefined {
-		return this.chartjs && this.chartjs.toBase64Image();
+	public getCanvasData(): string {
+		return this.chartjs.toBase64Image();
 	}
 
 	public set data(data: IInsightData) {
@@ -95,7 +91,7 @@ export class Graph implements IInsight {
 		}
 		this._data = data;
 		let labels: Array<string>;
-		let chartData: Array<Chart.ChartDataSets>;
+		let chartData: Array<ChartJs.ChartDataSets>;
 
 		if (this.options.dataDirection === DataDirection.Horizontal) {
 			if (this.options.labelFirstColumn) {
@@ -118,7 +114,7 @@ export class Graph implements IInsight {
 					dataSetMap[legend].data.push({ x: row[1], y: Number(row[2]) });
 				}
 			});
-			chartData = values(dataSetMap);
+			chartData = Object.values(dataSetMap);
 		} else {
 			if (this.options.dataDirection === DataDirection.Horizontal) {
 				if (this.options.labelFirstColumn) {
@@ -156,7 +152,7 @@ export class Graph implements IInsight {
 		}
 
 		chartData = chartData.map((c, i) => {
-			return mixin(c, getColors(this.options.type, i, c.data!.length), false);
+			return mixin(c, getColors(this.options.type, i, c.data.length), false);
 		});
 
 		if (this.chartjs) {
@@ -165,9 +161,9 @@ export class Graph implements IInsight {
 			// we don't want to include lables for timeSeries
 			this.chartjs.data.labels = this.originalType === 'timeSeries' ? [] : labels;
 			this.chartjs.options = this.transformOptions(this.options);
-			this.chartjs.update({ duration: 0 });
+			this.chartjs.update(0);
 		} else {
-			this.chartjs = new chartjs.Chart(this.canvas.getContext('2d')!, {
+			this.chartjs = new ChartJs(this.canvas.getContext('2d'), {
 				data: {
 					// we don't want to include lables for timeSeries
 					labels: this.originalType === 'timeSeries' ? [] : labels,
@@ -179,21 +175,21 @@ export class Graph implements IInsight {
 		}
 	}
 
-	private transformOptions(options: IInsightOptions): Chart.ChartOptions {
-		let retval: Chart.ChartOptions = {};
+	private transformOptions(options: IInsightOptions): ChartJs.ChartOptions {
+		let retval: ChartJs.ChartOptions = {};
 		retval.maintainAspectRatio = false;
 
 		let foregroundColor = this._theme.getColor(colors.editorForeground);
-		let foreground = foregroundColor ? foregroundColor.toString() : undefined;
+		let foreground = foregroundColor ? foregroundColor.toString() : null;
 		let gridLinesColor = this._theme.getColor(editorLineNumbers);
-		let gridLines = gridLinesColor ? gridLinesColor.toString() : undefined;
+		let gridLines = gridLinesColor ? gridLinesColor.toString() : null;
 		let backgroundColor = this._theme.getColor(colors.editorBackground);
-		let background = backgroundColor ? backgroundColor.toString() : undefined;
+		let background = backgroundColor ? backgroundColor.toString() : null;
 
 		if (options) {
 			retval.scales = {};
 			// we only want to include axis if it is a axis based graph type
-			if (!noneLineGraphs.find(x => x === options.type as ChartType)) {
+			if (!noneLineGraphs.includes(options.type as ChartType)) {
 				retval.scales.xAxes = [{
 					scaleLabel: {
 						fontColor: foreground,
@@ -216,7 +212,7 @@ export class Graph implements IInsight {
 					retval.scales = mixin(retval.scales, { xAxes: [{ ticks: { min: options.xAxisMin } }] }, true, customMixin);
 				}
 
-				retval.scales!.yAxes = [{
+				retval.scales.yAxes = [{
 					scaleLabel: {
 						fontColor: foreground,
 						labelString: options.yAxisLabel,
@@ -266,8 +262,8 @@ export class Graph implements IInsight {
 				}
 			}
 
-			retval.legend = <Chart.ChartLegendOptions>{
-				position: options.legendPosition as Chart.PositionType,
+			retval.legend = <ChartJs.ChartLegendOptions>{
+				position: options.legendPosition as ChartJs.PositionType,
 				display: options.legendPosition !== LegendPosition.None,
 				labels: {
 					fontColor: foreground
@@ -291,9 +287,7 @@ export class Graph implements IInsight {
 			this.options.dataType = DataType.Point;
 			this.options.dataDirection = DataDirection.Horizontal;
 		}
-		if (this._data) {
-			this.data = this._data;
-		}
+		this.data = this._data;
 	}
 
 	public get options(): IInsightOptions {

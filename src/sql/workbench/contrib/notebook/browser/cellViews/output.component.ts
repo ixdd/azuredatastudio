@@ -6,13 +6,14 @@ import 'vs/css!./code';
 import 'vs/css!./media/output';
 
 import { OnInit, Component, Input, Inject, ElementRef, ViewChild, SimpleChange, AfterViewInit, forwardRef, ChangeDetectorRef, ComponentRef, ComponentFactoryResolver } from '@angular/core';
+import { AngularDisposable } from 'sql/base/browser/lifecycle';
 import { Event } from 'vs/base/common/event';
 import { nb } from 'azdata';
-import { ICellModel } from 'sql/workbench/services/notebook/browser/models/modelInterfaces';
+import { ICellModel } from 'sql/workbench/contrib/notebook/browser/models/modelInterfaces';
 import * as outputProcessor from 'sql/workbench/contrib/notebook/browser/models/outputProcessor';
-import { IThemeService, IColorTheme } from 'vs/platform/theme/common/themeService';
+import { IThemeService, ITheme } from 'vs/platform/theme/common/themeService';
 import * as DOM from 'vs/base/browser/dom';
-import { ComponentHostDirective } from 'sql/base/browser/componentHost.directive';
+import { ComponentHostDirective } from 'sql/workbench/contrib/dashboard/browser/core/componentHost.directive';
 import { Extensions, IMimeComponent, IMimeComponentRegistry } from 'sql/workbench/contrib/notebook/browser/outputs/mimeRegistry';
 import * as colors from 'vs/platform/theme/common/colorRegistry';
 import * as themeColors from 'vs/workbench/common/theme';
@@ -20,7 +21,6 @@ import { Registry } from 'vs/platform/registry/common/platform';
 import { localize } from 'vs/nls';
 import * as types from 'vs/base/common/types';
 import { getErrorMessage } from 'vs/base/common/errors';
-import { CellView } from 'sql/workbench/contrib/notebook/browser/cellViews/interfaces';
 
 export const OUTPUT_SELECTOR: string = 'output-component';
 const USER_SELECT_CLASS = 'actionselect';
@@ -31,7 +31,7 @@ const componentRegistry = <IMimeComponentRegistry>Registry.as(Extensions.MimeCom
 	selector: OUTPUT_SELECTOR,
 	templateUrl: decodeURI(require.toUrl('./output.component.html'))
 })
-export class OutputComponent extends CellView implements OnInit, AfterViewInit {
+export class OutputComponent extends AngularDisposable implements OnInit, AfterViewInit {
 	@ViewChild('output', { read: ElementRef }) private outputElement: ElementRef;
 	@ViewChild(ComponentHostDirective) componentHost: ComponentHostDirective;
 	@Input() cellOutput: nb.ICellOutput;
@@ -41,9 +41,6 @@ export class OutputComponent extends CellView implements OnInit, AfterViewInit {
 	private _initialized: boolean = false;
 	private _activeCellId: string;
 	private _componentInstance: IMimeComponent;
-	private _batchId?: number;
-	private _id?: number;
-	private _queryRunnerUri?: string;
 	public errorText: string;
 
 	constructor(
@@ -56,7 +53,7 @@ export class OutputComponent extends CellView implements OnInit, AfterViewInit {
 	}
 
 	ngOnInit() {
-		this._register(this._themeService.onDidColorThemeChange(event => this.updateTheme(event)));
+		this._register(this._themeService.onThemeChange(event => this.updateTheme(event)));
 		this.loadComponent();
 		this.layout();
 		this._initialized = true;
@@ -65,7 +62,7 @@ export class OutputComponent extends CellView implements OnInit, AfterViewInit {
 	}
 
 	ngAfterViewInit() {
-		this.updateTheme(this._themeService.getColorTheme());
+		this.updateTheme(this._themeService.getTheme());
 	}
 
 	ngOnChanges(changes: { [propKey: string]: SimpleChange }) {
@@ -105,18 +102,6 @@ export class OutputComponent extends CellView implements OnInit, AfterViewInit {
 		return this._componentInstance;
 	}
 
-	@Input() set batchId(value: number) {
-		this._batchId = value;
-	}
-
-	@Input() set id(value: number) {
-		this._id = value;
-	}
-
-	@Input() set queryRunnerUri(value: string) {
-		this._queryRunnerUri = value;
-	}
-
 	get trustedMode(): boolean {
 		return this._trusted;
 	}
@@ -143,7 +128,7 @@ export class OutputComponent extends CellView implements OnInit, AfterViewInit {
 	public hasError(): boolean {
 		return !types.isUndefinedOrNull(this.errorText);
 	}
-	private updateTheme(theme: IColorTheme): void {
+	private updateTheme(theme: ITheme): void {
 		let el = <HTMLElement>this._ref.nativeElement;
 		let backgroundColor = theme.getColor(colors.editorBackground, true);
 		let foregroundColor = theme.getColor(themeColors.SIDE_BAR_FOREGROUND, true);
@@ -187,13 +172,7 @@ export class OutputComponent extends CellView implements OnInit, AfterViewInit {
 			this._componentInstance = componentRef.instance;
 			this._componentInstance.mimeType = mimeType;
 			this._componentInstance.cellModel = this.cellModel;
-			this._componentInstance.cellOutput = this.cellOutput;
 			this._componentInstance.bundleOptions = options;
-			if (this._queryRunnerUri) {
-				this._componentInstance.batchId = this._batchId;
-				this._componentInstance.id = this._id;
-				this._componentInstance.queryRunnerUri = this._queryRunnerUri;
-			}
 			this._changeref.detectChanges();
 			let el = <HTMLElement>componentRef.location.nativeElement;
 
@@ -204,9 +183,5 @@ export class OutputComponent extends CellView implements OnInit, AfterViewInit {
 			this.errorText = localize('componentRenderError', "Error rendering component: {0}", getErrorMessage(e));
 			return;
 		}
-	}
-
-	public cellGuid(): string {
-		return this.cellModel.cellGuid;
 	}
 }

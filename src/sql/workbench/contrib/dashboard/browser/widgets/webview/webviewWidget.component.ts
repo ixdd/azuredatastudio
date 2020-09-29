@@ -3,7 +3,7 @@
  *  Licensed under the Source EULA. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Component, Inject, forwardRef, OnInit, ElementRef, ChangeDetectorRef } from '@angular/core';
+import { Component, Inject, forwardRef, OnInit, ElementRef } from '@angular/core';
 
 import { Event, Emitter } from 'vs/base/common/event';
 import { IDisposable } from 'vs/base/common/lifecycle';
@@ -41,10 +41,9 @@ export class WebviewWidget extends DashboardWidget implements IDashboardWidget, 
 		@Inject(WIDGET_CONFIG) protected readonly _config: WidgetConfig,
 		@Inject(forwardRef(() => ElementRef)) private readonly _el: ElementRef,
 		@Inject(IDashboardViewService) private readonly dashboardViewService: IDashboardViewService,
-		@Inject(IWebviewService) private readonly webviewService: IWebviewService,
-		@Inject(forwardRef(() => ChangeDetectorRef)) changeRef: ChangeDetectorRef
+		@Inject(IWebviewService) private readonly webviewService: IWebviewService
 	) {
-		super(changeRef);
+		super();
 		this._id = (_config.widget[selector] as IWebviewWidgetConfig).id;
 	}
 
@@ -86,7 +85,7 @@ export class WebviewWidget extends DashboardWidget implements IDashboardWidget, 
 
 	public sendMessage(message: string): void {
 		if (this._webview) {
-			this._webview.postMessage(message);
+			this._webview.sendMessage(message);
 		}
 	}
 
@@ -98,11 +97,11 @@ export class WebviewWidget extends DashboardWidget implements IDashboardWidget, 
 			this._onMessageDisposable.dispose();
 		}
 
-		this._webview = this.webviewService.createWebviewElement(this.id,
+		this._webview = this.webviewService.createWebview(this.id,
 			{},
 			{
 				allowScripts: true,
-			}, undefined);
+			});
 
 		this._webview.mountTo(this._el.nativeElement);
 		this._onMessageDisposable = this._webview.onMessage(e => {

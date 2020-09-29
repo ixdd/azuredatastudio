@@ -15,7 +15,6 @@ import { mssqlProviderName } from 'sql/platform/connection/common/constants';
 import { NullLogService } from 'vs/platform/log/common/log';
 import { EnvironmentService } from 'vs/platform/environment/node/environmentService';
 import { parseArgs, OPTIONS } from 'vs/platform/environment/node/argv';
-import { assign } from 'vs/base/common/objects';
 
 let connections: ConnectionStatusManager;
 let capabilitiesService: TestCapabilitiesService;
@@ -31,11 +30,11 @@ let connectionProfile: IConnectionProfile = {
 	groupFullName: 'g2/g2-2',
 	groupId: 'group id',
 	getOptionsKey: () => 'connection1',
-	matches: undefined!,
+	matches: undefined,
 	providerName: mssqlProviderName,
 	options: {},
 	saveProfile: true,
-	id: undefined!
+	id: undefined
 };
 let editorConnectionProfile: IConnectionProfile = {
 	connectionName: 'new name',
@@ -48,11 +47,11 @@ let editorConnectionProfile: IConnectionProfile = {
 	groupFullName: 'g2/g2-2',
 	groupId: 'group id',
 	getOptionsKey: () => 'connection2',
-	matches: undefined!,
+	matches: undefined,
 	providerName: mssqlProviderName,
 	options: {},
 	saveProfile: true,
-	id: undefined!
+	id: undefined
 };
 let connectionProfileWithoutDbName: IConnectionProfile = {
 	connectionName: 'new name',
@@ -65,11 +64,11 @@ let connectionProfileWithoutDbName: IConnectionProfile = {
 	groupFullName: 'g2/g2-2',
 	groupId: 'group id',
 	getOptionsKey: () => 'connection1',
-	matches: undefined!,
+	matches: undefined,
 	providerName: mssqlProviderName,
 	options: {},
 	saveProfile: true,
-	id: undefined!
+	id: undefined
 };
 
 let connection1Id: string;
@@ -100,8 +99,9 @@ suite('SQL ConnectionStatusManager tests', () => {
 
 	test('findConnection should return connection given valid id', () => {
 		let id: string = connection1Id;
+		let expected = connectionProfileObject;
 		let actual = connections.findConnection(id);
-		assert.equal(connectionProfileObject.matches(actual!.connectionProfile), true);
+		assert.equal(connectionProfileObject.matches(actual.connectionProfile), true);
 	});
 
 	test('getConnectionProfile should return undefined given invalid id', () => {
@@ -113,8 +113,9 @@ suite('SQL ConnectionStatusManager tests', () => {
 
 	test('getConnectionProfile should return connection given valid id', () => {
 		let id: string = connection1Id;
+		let expected = connectionProfileObject;
 		let actual = connections.getConnectionProfile(id);
-		assert.equal(connectionProfileObject.matches(actual!), true);
+		assert.equal(connectionProfileObject.matches(actual), true);
 	});
 
 	test('hasConnection should return false given invalid id', () => {
@@ -136,11 +137,11 @@ suite('SQL ConnectionStatusManager tests', () => {
 		let summary: azdata.ConnectionInfoSummary = {
 			ownerUri: connection1Id,
 			connectionId: connection1Id,
-			messages: undefined!,
-			errorMessage: undefined!,
-			errorNumber: undefined!,
-			serverInfo: undefined!,
-			connectionSummary: undefined!
+			messages: undefined,
+			errorMessage: undefined,
+			errorNumber: undefined,
+			serverInfo: undefined,
+			connectionSummary: undefined
 		};
 		connections.onConnectionComplete(summary);
 		let actual = connections.addConnection(connectionProfile, connection1Id).connecting;
@@ -152,14 +153,14 @@ suite('SQL ConnectionStatusManager tests', () => {
 		let summary: azdata.ConnectionInfoSummary = {
 			ownerUri: connection1Id,
 			connectionId: connection1Id,
-			messages: undefined!,
-			errorMessage: undefined!,
-			errorNumber: undefined!,
-			serverInfo: undefined!,
-			connectionSummary: undefined!
+			messages: undefined,
+			errorMessage: undefined,
+			errorNumber: undefined,
+			serverInfo: undefined,
+			connectionSummary: undefined
 		};
 		connections.onConnectionComplete(summary);
-		let actual = connections.findConnection(connection1Id)!.connecting;
+		let actual = connections.findConnection(connection1Id).connecting;
 		assert.equal(actual, expected);
 		actual = connections.isConnecting(connection1Id);
 		assert.equal(actual, expected);
@@ -170,12 +171,12 @@ suite('SQL ConnectionStatusManager tests', () => {
 		let expectedConnectionId = 'new id';
 		connections.addConnection(connectionProfile, connection1Id);
 
-		let updatedConnection = assign({}, connectionProfile, { groupId: expected, getOptionsKey: () => connectionProfile.getOptionsKey() + expected, id: expectedConnectionId });
+		let updatedConnection = Object.assign({}, connectionProfile, { groupId: expected, getOptionsKey: () => connectionProfile.getOptionsKey() + expected, id: expectedConnectionId });
 		let actualId = connections.updateConnectionProfile(updatedConnection, connection1Id);
 
 		let newId = Utils.generateUri(updatedConnection);
-		let actual = connections.getConnectionProfile(newId)!.groupId;
-		let actualConnectionId = connections.getConnectionProfile(newId)!.id;
+		let actual = connections.getConnectionProfile(newId).groupId;
+		let actualConnectionId = connections.getConnectionProfile(newId).id;
 		assert.equal(actual, expected);
 		assert.equal(actualId, newId);
 		assert.equal(actualConnectionId, expectedConnectionId);
@@ -186,25 +187,25 @@ suite('SQL ConnectionStatusManager tests', () => {
 		let summary: azdata.ConnectionInfoSummary = {
 			connectionSummary: {
 				databaseName: dbName,
-				serverName: undefined!,
-				userName: undefined!
+				serverName: undefined,
+				userName: undefined
 			}
 			, ownerUri: connection3Id,
 			connectionId: 'connection id',
-			errorMessage: undefined!,
-			errorNumber: undefined!,
-			messages: undefined!,
-			serverInfo: undefined!
+			errorMessage: undefined,
+			errorNumber: undefined,
+			messages: undefined,
+			serverInfo: undefined
 		};
 
 		//The original connection didn't have database name
 		let connectionStatus = connections.findConnection(connection3Id);
-		connectionStatus!.connectionProfile.databaseName = '';
+		connectionStatus.connectionProfile.databaseName = '';
 
 		//Verify database name changed after connection is complete
 		connections.updateDatabaseName(summary);
 		connectionStatus = connections.findConnection(connection3Id);
-		assert.equal(connectionStatus!.connectionProfile.databaseName, dbName);
+		assert.equal(connectionStatus.connectionProfile.databaseName, dbName);
 	});
 
 	test('getOriginalOwnerUri should return the original uri given uri with db name', () => {
@@ -212,24 +213,24 @@ suite('SQL ConnectionStatusManager tests', () => {
 		let summary: azdata.ConnectionInfoSummary = {
 			connectionSummary: {
 				databaseName: dbName,
-				serverName: undefined!,
-				userName: undefined!
+				serverName: undefined,
+				userName: undefined
 			}
 			, ownerUri: connection3Id,
 			connectionId: 'connection id',
-			errorMessage: undefined!,
-			errorNumber: undefined!,
-			messages: undefined!,
-			serverInfo: undefined!
+			errorMessage: undefined,
+			errorNumber: undefined,
+			messages: undefined,
+			serverInfo: undefined
 		};
 
 		//The original connection didn't have database name
-		let connectionStatus = connections.findConnection(connection3Id)!;
+		let connectionStatus = connections.findConnection(connection3Id);
 		connectionStatus.connectionProfile.databaseName = '';
 
 		//Verify database name changed after connection is complete
 		connections.updateDatabaseName(summary);
-		connectionStatus = connections.findConnection(connection3Id)!;
+		connectionStatus = connections.findConnection(connection3Id);
 		let ownerUriWithDbName = Utils.generateUriWithPrefix(connectionStatus.connectionProfile, 'connection:');
 
 		//The uri assigned to connection without db name should be the original one
@@ -245,7 +246,7 @@ suite('SQL ConnectionStatusManager tests', () => {
 
 	test('getActiveConnectionProfiles should return a list of all the unique connections that the status manager knows about', () => {
 		// Add duplicate connections
-		let newConnection = assign({}, connectionProfile);
+		let newConnection = Object.assign({}, connectionProfile);
 		newConnection.id = 'test_id';
 		newConnection.serverName = 'new_server_name';
 		newConnection.options['databaseDisplayName'] = newConnection.databaseName;

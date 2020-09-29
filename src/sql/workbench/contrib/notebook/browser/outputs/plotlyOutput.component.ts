@@ -4,13 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 
-import { OnInit, Component, Input, ElementRef, ViewChild } from '@angular/core';
+import { OnInit, Component, Input, Inject, ElementRef, ViewChild } from '@angular/core';
+import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { localize } from 'vs/nls';
 import * as types from 'vs/base/common/types';
 import { AngularDisposable } from 'sql/base/browser/lifecycle';
 import { IMimeComponent } from 'sql/workbench/contrib/notebook/browser/outputs/mimeRegistry';
-import { ICellModel } from 'sql/workbench/services/notebook/browser/models/modelInterfaces';
-import { MimeModel } from 'sql/workbench/services/notebook/browser/outputs/mimemodel';
+import { ICellModel } from 'sql/workbench/contrib/notebook/browser/models/modelInterfaces';
+import { MimeModel } from 'sql/workbench/contrib/notebook/browser/models/mimemodel';
 import { getErrorMessage } from 'vs/base/common/errors';
 
 type ObjectType = object;
@@ -42,7 +43,7 @@ declare class PlotlyHTMLElement extends HTMLDivElement {
 export class PlotlyOutputComponent extends AngularDisposable implements IMimeComponent, OnInit {
 	public static readonly SELECTOR: string = 'plotly-output';
 
-	private static Plotly?: Promise<typeof import('plotly.js-dist-min')>;
+	private static Plotly?: Promise<typeof import('plotly.js-dist')>;
 
 	@ViewChild('output', { read: ElementRef }) private output: ElementRef;
 
@@ -53,7 +54,9 @@ export class PlotlyOutputComponent extends AngularDisposable implements IMimeCom
 	private _plotDiv: PlotlyHTMLElement;
 	public errorText: string;
 
-	constructor() {
+	constructor(
+		@Inject(IThemeService) private readonly themeService: IThemeService
+	) {
 		super();
 	}
 
@@ -79,7 +82,7 @@ export class PlotlyOutputComponent extends AngularDisposable implements IMimeCom
 
 	ngOnInit() {
 		if (!PlotlyOutputComponent.Plotly) {
-			PlotlyOutputComponent.Plotly = import('plotly.js-dist-min');
+			PlotlyOutputComponent.Plotly = import('plotly.js-dist');
 		}
 		this._plotDiv = this.output.nativeElement;
 		this.renderPlotly();

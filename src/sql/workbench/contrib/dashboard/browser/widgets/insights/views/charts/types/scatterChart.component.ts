@@ -8,8 +8,9 @@ import { defaultChartConfig } from 'sql/workbench/contrib/dashboard/browser/widg
 
 import { mixin, deepClone } from 'vs/base/common/objects';
 import { ChangeDetectorRef, Inject, forwardRef } from '@angular/core';
+import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
-import { IAdsTelemetryService } from 'sql/platform/telemetry/common/telemetry';
+import { ILogService } from 'vs/platform/log/common/log';
 import { ChartType } from 'sql/workbench/contrib/charts/common/interfaces';
 
 const defaultScatterConfig = mixin(deepClone(defaultChartConfig), { dataType: 'point', dataDirection: 'horizontal' }) as ILineConfig;
@@ -21,8 +22,9 @@ export default class ScatterChart extends LineChart {
 	constructor(
 		@Inject(forwardRef(() => ChangeDetectorRef)) _changeRef: ChangeDetectorRef,
 		@Inject(IThemeService) themeService: IThemeService,
-		@Inject(IAdsTelemetryService) telemetryService: IAdsTelemetryService
+		@Inject(ITelemetryService) telemetryService: ITelemetryService,
+		@Inject(ILogService) logService: ILogService
 	) {
-		super(_changeRef, themeService, telemetryService);
+		super(_changeRef, themeService, telemetryService, logService);
 	}
 }

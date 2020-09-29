@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ITree, IRenderer } from 'vs/base/parts/tree/browser/tree';
-import { TaskNode, TaskStatus } from 'sql/workbench/services/tasks/common/tasksNode';
+import { TaskNode, TaskStatus } from 'sql/platform/tasks/common/tasksNode';
 import * as dom from 'vs/base/browser/dom';
 import { localize } from 'vs/nls';
 import * as Utils from 'sql/platform/connection/common/utils';
@@ -29,6 +29,7 @@ export interface ITaskHistoryTemplateData {
 export class TaskHistoryRenderer implements IRenderer {
 
 	public static readonly TASKOBJECT_HEIGHT = 22;
+	private static readonly TASKOBJECT_TEMPLATE_ID = 'carbonTask';
 	private static readonly FAIL_CLASS = 'error';
 	private static readonly SUCCESS_CLASS = 'success';
 	private static readonly INPROGRESS_CLASS = 'in-progress';
@@ -67,11 +68,10 @@ export class TaskHistoryRenderer implements IRenderer {
 	 * Render a element, given an object bag returned by the template
 	 */
 	public renderElement(tree: ITree, element: TaskNode, templateId: string, templateData: ITaskHistoryTemplateData): void {
-		let taskStatus: string;
+		let taskStatus;
 		if (element) {
 			templateData.icon.className = 'task-icon';
 			switch (element.status) {
-				case TaskStatus.SucceededWithWarning:
 				case TaskStatus.Succeeded:
 					dom.addClass(templateData.icon, TaskHistoryRenderer.SUCCESS_CLASS);
 					taskStatus = localize('succeeded', "succeeded");
@@ -104,19 +104,12 @@ export class TaskHistoryRenderer implements IRenderer {
 			templateData.label.textContent = element.taskName + ' ' + taskStatus;
 			templateData.label.title = templateData.label.textContent;
 
-			let description: string | undefined;
 			// Determine the target name and set hover text equal to that
-			// show target location if there is one, otherwise show server and database name
-			if (element.targetLocation) {
-				description = element.targetLocation;
-			} else {
-				description = element.serverName;
-				if (element.databaseName) {
-					description += ' | ' + element.databaseName;
-				}
+			let description = element.serverName;
+			if (element.databaseName) {
+				description += ' | ' + element.databaseName;
 			}
-
-			templateData.description.textContent = description ?? '';
+			templateData.description.textContent = description;
 			templateData.description.title = templateData.description.textContent;
 
 			this.timer(element, templateData.time);

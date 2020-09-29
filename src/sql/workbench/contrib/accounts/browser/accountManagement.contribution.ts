@@ -76,7 +76,7 @@ ExtensionsRegistry.registerExtensionPoint<IAccountContrib | IAccountContrib[]>({
 
 	for (let extension of extensions) {
 		const { value } = extension;
-		if (Array.isArray(value)) {
+		if (Array.isArray<IAccountContrib>(value)) {
 			for (let command of value) {
 				handleCommand(command, extension);
 			}

@@ -21,7 +21,11 @@ import { Modal } from 'sql/workbench/browser/modal/modal';
 import { attachButtonStyler } from 'sql/platform/theme/common/styler';
 import * as TelemetryKeys from 'sql/platform/telemetry/common/telemetryKeys';
 import { NewDashboardTabViewModel, IDashboardUITab } from 'sql/workbench/services/dashboard/browser/newDashboardTabViewModel';
+<<<<<<< HEAD
 import { IDashboardTab } from 'sql/workbench/services/dashboard/browser/common/interfaces';
+=======
+import { IDashboardTab } from 'sql/workbench/contrib/dashboard/browser/dashboardRegistry';
+>>>>>>> origin/workbenchlinting
 import { IClipboardService } from 'sql/platform/clipboard/common/clipboardService';
 import { ILogService } from 'vs/platform/log/common/log';
 import { ITextResourcePropertiesService } from 'vs/editor/common/services/textResourceConfigurationService';

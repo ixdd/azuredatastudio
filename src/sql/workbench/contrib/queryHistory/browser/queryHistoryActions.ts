@@ -4,33 +4,30 @@
  *--------------------------------------------------------------------------------------------*/
 
 
-import { QUERY_HISTORY_VIEW_ID } from 'sql/workbench/contrib/queryHistory/common/constants';
+import { QUERY_HISTORY_PANEL_ID } from 'sql/workbench/contrib/queryHistory/common/constants';
 import { RunQueryOnConnectionMode } from 'sql/platform/connection/common/connectionManagement';
 import { Action } from 'vs/base/common/actions';
 import { IWorkbenchLayoutService } from 'vs/workbench/services/layout/browser/layoutService';
+import { IPanelService } from 'vs/workbench/services/panel/common/panelService';
+import { TogglePanelAction } from 'vs/workbench/browser/panel';
 import { localize } from 'vs/nls';
-import { IQueryHistoryService } from 'sql/workbench/services/queryHistory/common/queryHistoryService';
+import { IQueryHistoryService } from 'sql/platform/queryHistory/common/queryHistoryService';
 import { QueryHistoryNode } from 'sql/workbench/contrib/queryHistory/browser/queryHistoryNode';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { openNewQuery } from 'sql/workbench/contrib/query/browser/queryActions';
 import { ICommandService } from 'vs/platform/commands/common/commands';
-import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
-import { IViewsService, IViewDescriptorService } from 'vs/workbench/common/views';
-import { ToggleViewAction } from 'vs/workbench/browser/actions/layoutActions';
 
-export class ToggleQueryHistoryAction extends ToggleViewAction {
+export class ToggleQueryHistoryAction extends TogglePanelAction {
 
 	public static readonly ID = 'workbench.action.tasks.toggleQueryHistory';
 	public static readonly LABEL = localize('toggleQueryHistory', "Toggle Query History");
 
 	constructor(
 		id: string, label: string,
-		@IViewsService viewsService: IViewsService,
-		@IViewDescriptorService viewDescriptorService: IViewDescriptorService,
-		@IContextKeyService contextKeyService: IContextKeyService,
-		@IWorkbenchLayoutService layoutService: IWorkbenchLayoutService
+		@IWorkbenchLayoutService layoutService: IWorkbenchLayoutService,
+		@IPanelService panelService: IPanelService,
 	) {
-		super(id, label, QUERY_HISTORY_VIEW_ID, viewsService, viewDescriptorService, contextKeyService, layoutService);
+		super(id, label, QUERY_HISTORY_PANEL_ID, panelService, layoutService);
 	}
 }
 
@@ -78,14 +75,14 @@ export class OpenQueryAction extends Action {
 	constructor(
 		id: string,
 		label: string,
-		@IInstantiationService private _instantiationService: IInstantiationService
+		@IInstantiationService private _instantiationService
 	) {
 		super(id, label);
 	}
 
 	public async run(element: QueryHistoryNode): Promise<void> {
 		if (element instanceof QueryHistoryNode && element.info) {
-			return this._instantiationService.invokeFunction(openNewQuery, element.info.connectionProfile, element.info.queryText, RunQueryOnConnectionMode.none).then();
+			return this._instantiationService.invokeFunction(openNewQuery, element.info.connectionProfile, element.info.queryText, RunQueryOnConnectionMode.none).then(() => true, () => false);
 		}
 	}
 }
@@ -97,14 +94,14 @@ export class RunQueryAction extends Action {
 	constructor(
 		id: string,
 		label: string,
-		@IInstantiationService private _instantiationService: IInstantiationService
+		@IInstantiationService private _instantiationService
 	) {
 		super(id, label);
 	}
 
 	public async run(element: QueryHistoryNode): Promise<void> {
 		if (element instanceof QueryHistoryNode && element.info) {
-			return this._instantiationService.invokeFunction(openNewQuery, element.info.connectionProfile, element.info.queryText, RunQueryOnConnectionMode.executeQuery).then();
+			return this._instantiationService.invokeFunction(openNewQuery, element.info.connectionProfile, element.info.queryText, RunQueryOnConnectionMode.executeQuery).catch(() => true, () => false);
 		}
 	}
 }
@@ -130,7 +127,7 @@ export class ToggleQueryHistoryCaptureAction extends Action {
 
 	private setClassAndLabel(enabled: boolean) {
 		if (enabled) {
-			this.class = 'toggle-query-history-capture-action codicon-debug-pause';
+			this.class = 'toggle-query-history-capture-action codicon-pause';
 			this.label = localize('queryHistory.disableCapture', "Pause Query History Capture");
 		} else {
 			this.class = 'toggle-query-history-capture-action codicon-play';

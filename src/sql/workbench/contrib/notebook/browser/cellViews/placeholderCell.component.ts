@@ -4,12 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 import 'vs/css!./placeholder';
 
-import { OnInit, Component, Input, Inject, forwardRef, ChangeDetectorRef, SimpleChange, OnChanges } from '@angular/core';
+import { OnInit, Component, Input, Inject, forwardRef, ElementRef, ChangeDetectorRef, OnDestroy, ViewChild, SimpleChange, OnChanges } from '@angular/core';
 import { CellView } from 'sql/workbench/contrib/notebook/browser/cellViews/interfaces';
-import { ICellModel } from 'sql/workbench/services/notebook/browser/models/modelInterfaces';
-import { NotebookModel } from 'sql/workbench/services/notebook/browser/models/notebookModel';
+import { ICellModel } from 'sql/workbench/contrib/notebook/browser/models/modelInterfaces';
+import { NotebookModel } from 'sql/workbench/contrib/notebook/browser/models/notebookModel';
 import { localize } from 'vs/nls';
-import { CellType } from 'sql/workbench/services/notebook/common/contracts';
+import { CellType } from 'sql/workbench/contrib/notebook/common/models/contracts';
 
 
 export const PLACEHOLDER_SELECTOR: string = 'placeholder-cell-component';
@@ -70,21 +70,16 @@ export class PlaceholderCellComponent extends CellView implements OnInit, OnChan
 
 	public addCell(cellType: string, event?: Event): void {
 		if (event) {
-			event.preventDefault();
 			event.stopPropagation();
 		}
 		let type: CellType = <CellType>cellType;
 		if (!type) {
 			type = 'code';
 		}
-		this._model.addCell(type);
+		this._model.addCell(<CellType>cellType);
 	}
 
 	public layout() {
 
-	}
-
-	public cellGuid(): string {
-		return this.cellModel.cellGuid;
 	}
 }

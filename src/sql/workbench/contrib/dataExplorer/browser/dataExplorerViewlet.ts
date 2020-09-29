@@ -11,22 +11,22 @@ import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IExtensionService } from 'vs/workbench/services/extensions/common/extensions';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
-import { IViewletViewOptions } from 'vs/workbench/browser/parts/views/viewsViewlet';
+import { ViewContainerViewlet, IViewletViewOptions } from 'vs/workbench/browser/parts/views/viewsViewlet';
 import { IStorageService } from 'vs/platform/storage/common/storage';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
+import { IAddedViewDescriptorRef } from 'vs/workbench/browser/parts/views/views';
+import { ViewletPanel } from 'vs/workbench/browser/parts/views/panelViewlet';
 import { ConnectionViewletPanel } from 'sql/workbench/contrib/dataExplorer/browser/connectionViewletPanel';
-import { Extensions as ViewContainerExtensions, IViewDescriptor, IViewsRegistry, IViewContainersRegistry, ViewContainerLocation, IViewDescriptorService } from 'vs/workbench/common/views';
+import { Extensions as ViewContainerExtensions, IViewDescriptor, IViewsRegistry, IViewContainersRegistry } from 'vs/workbench/common/views';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IWorkbenchLayoutService } from 'vs/workbench/services/layout/browser/layoutService';
 import { Registry } from 'vs/platform/registry/common/platform';
 import { IMenuService, MenuId } from 'vs/platform/actions/common/actions';
 import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
-import { ShowViewletAction, Viewlet } from 'vs/workbench/browser/viewlet';
+import { ShowViewletAction } from 'vs/workbench/browser/viewlet';
 import { IEditorGroupsService } from 'vs/workbench/services/editor/common/editorGroupsService';
 import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
-import { ViewPaneContainer, ViewPane } from 'vs/workbench/browser/parts/views/viewPaneContainer';
-import { SyncDescriptor } from 'vs/platform/instantiation/common/descriptors';
 
 export const VIEWLET_ID = 'workbench.view.connections';
 
@@ -46,6 +46,8 @@ export class OpenDataExplorerViewletAction extends ShowViewletAction {
 	}
 }
 
+export const VIEW_CONTAINER = Registry.as<IViewContainersRegistry>(ViewContainerExtensions.ViewContainersRegistry).registerViewContainer(VIEWLET_ID);
+
 export class DataExplorerViewletViewsContribution implements IWorkbenchContribution {
 
 	constructor() {
@@ -62,7 +64,7 @@ export class DataExplorerViewletViewsContribution implements IWorkbenchContribut
 		return {
 			id: ConnectionViewletPanel.ID,
 			name: localize('dataExplorer.servers', "Servers"),
-			ctorDescriptor: new SyncDescriptor(ConnectionViewletPanel),
+			ctorDescriptor: { ctor: ConnectionViewletPanel },
 			weight: 100,
 			canToggleVisibility: true,
 			order: 0
@@ -70,26 +72,10 @@ export class DataExplorerViewletViewsContribution implements IWorkbenchContribut
 	}
 }
 
-export class DataExplorerViewlet extends Viewlet {
-	constructor(
-		@ITelemetryService telemetryService: ITelemetryService,
-		@IStorageService protected storageService: IStorageService,
-		@IInstantiationService protected instantiationService: IInstantiationService,
-		@IThemeService themeService: IThemeService,
-		@IContextMenuService protected contextMenuService: IContextMenuService,
-		@IExtensionService protected extensionService: IExtensionService,
-		@IWorkspaceContextService protected contextService: IWorkspaceContextService,
-		@IWorkbenchLayoutService protected layoutService: IWorkbenchLayoutService,
-		@IConfigurationService protected configurationService: IConfigurationService
-	) {
-		super(VIEWLET_ID, instantiationService.createInstance(DataExplorerViewPaneContainer), telemetryService, storageService, instantiationService, themeService, contextMenuService, extensionService, contextService, layoutService, configurationService);
-	}
-}
+export class DataExplorerViewlet extends ViewContainerViewlet {
+	private root: HTMLElement;
 
-export class DataExplorerViewPaneContainer extends ViewPaneContainer {
-	private root?: HTMLElement;
-
-	private dataSourcesBox?: HTMLElement;
+	private dataSourcesBox: HTMLElement;
 
 	constructor(
 		@IWorkbenchLayoutService layoutService: IWorkbenchLayoutService,
@@ -102,10 +88,9 @@ export class DataExplorerViewPaneContainer extends ViewPaneContainer {
 		@IExtensionService extensionService: IExtensionService,
 		@IConfigurationService configurationService: IConfigurationService,
 		@IMenuService private menuService: IMenuService,
-		@IContextKeyService private contextKeyService: IContextKeyService,
-		@IViewDescriptorService viewDescriptorService: IViewDescriptorService
+		@IContextKeyService private contextKeyService: IContextKeyService
 	) {
-		super(VIEWLET_ID, { mergeViewWithContainerWhenSingleView: true }, instantiationService, configurationService, layoutService, contextMenuService, telemetryService, extensionService, themeService, storageService, contextService, viewDescriptorService);
+		super(VIEWLET_ID, `${VIEWLET_ID}.state`, true, configurationService, layoutService, telemetryService, storageService, instantiationService, themeService, contextMenuService, extensionService, contextService);
 	}
 
 	create(parent: HTMLElement): void {
@@ -125,7 +110,7 @@ export class DataExplorerViewPaneContainer extends ViewPaneContainer {
 	}
 
 	layout(dimension: Dimension): void {
-		toggleClass(this.root!, 'narrow', dimension.width <= 300);
+		toggleClass(this.root, 'narrow', dimension.width <= 300);
 		super.layout(new Dimension(dimension.width, dimension.height));
 	}
 
@@ -133,9 +118,13 @@ export class DataExplorerViewPaneContainer extends ViewPaneContainer {
 		return 400;
 	}
 
+	getActions(): IAction[] {
+		return [];
+	}
+
 	getSecondaryActions(): IAction[] {
 		let menu = this.menuService.createMenu(MenuId.DataExplorerAction, this.contextKeyService);
-		let actions: IAction[] = [];
+		let actions = [];
 		menu.getActions({}).forEach(group => {
 			if (group[0] === 'secondary') {
 				actions.push(...group[1]);
@@ -145,18 +134,14 @@ export class DataExplorerViewPaneContainer extends ViewPaneContainer {
 		return actions;
 	}
 
-	protected createView(viewDescriptor: IViewDescriptor, options: IViewletViewOptions): ViewPane {
-		let viewletPanel = this.instantiationService.createInstance(viewDescriptor.ctorDescriptor.ctor, options) as ViewPane;
+	protected onDidAddViews(added: IAddedViewDescriptorRef[]): ViewletPanel[] {
+		const addedViews = super.onDidAddViews(added);
+		return addedViews;
+	}
+
+	protected createView(viewDescriptor: IViewDescriptor, options: IViewletViewOptions): ViewletPanel {
+		let viewletPanel = this.instantiationService.createInstance(viewDescriptor.ctorDescriptor.ctor, options) as ViewletPanel;
 		this._register(viewletPanel);
 		return viewletPanel;
 	}
 }
-
-export const VIEW_CONTAINER = Registry.as<IViewContainersRegistry>(ViewContainerExtensions.ViewContainersRegistry).registerViewContainer({
-	id: VIEWLET_ID,
-	name: localize('dataexplorer.name', "Connections"),
-	ctorDescriptor: new SyncDescriptor(DataExplorerViewPaneContainer),
-	icon: 'dataExplorer',
-	order: 0,
-	storageId: `${VIEWLET_ID}.state`
-}, ViewContainerLocation.Sidebar, true);

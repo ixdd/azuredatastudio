@@ -4,10 +4,10 @@
 | Distributed under the terms of the Modified BSD License.
 |----------------------------------------------------------------------------*/
 
+import { JSONObject, isPrimitive } from '../../common/models/jsonext';
+import { MimeModel } from './mimemodel';
+import { nbformat } from '../../common/models/nbformat';
 import { nb } from 'azdata';
-import { JSONObject, isPrimitive } from 'sql/workbench/services/notebook/common/jsonext';
-import { nbformat } from 'sql/workbench/services/notebook/common/nbformat';
-import { MimeModel } from 'sql/workbench/services/notebook/browser/outputs/mimemodel';
 
 /**
  * A multiline string.
@@ -41,10 +41,10 @@ export function getData(output: nb.ICellOutput): JSONObject {
 	} else if (nbformat.isError(output)) {
 		let traceback = output.traceback ? output.traceback.join('\n') : undefined;
 		bundle['application/vnd.jupyter.stderr'] = undefined;
-		if (traceback) {
+		if (traceback && traceback !== '') {
 			bundle['application/vnd.jupyter.stderr'] = traceback;
 		} else if (output.evalue) {
-			bundle['application/vnd.jupyter.stderr'] = output.ename ? `${output.ename}: ${output.evalue}` : `${output.evalue}`;
+			bundle['application/vnd.jupyter.stderr'] = output.ename && output.ename !== '' ? `${output.ename}: ${output.evalue}` : `${output.evalue}`;
 		}
 	}
 	return convertBundle(bundle);
@@ -78,7 +78,7 @@ export function getBundleOptions(options: IOutputModelOptions): MimeModel.IOptio
  */
 export function extract(value: JSONObject, key: string): {} {
 	let item = value[key];
-	if (item === undefined || item === null || isPrimitive(item)) {
+	if (isPrimitive(item)) {
 		return item;
 	}
 	return JSON.parse(JSON.stringify(item));

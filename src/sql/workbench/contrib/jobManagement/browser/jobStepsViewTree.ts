@@ -10,9 +10,8 @@ import * as TreeDefaults from 'vs/base/parts/tree/browser/treeDefaults';
 import { IMouseEvent } from 'vs/base/browser/mouseEvent';
 import { generateUuid } from 'vs/base/common/uuid';
 import { IKeyboardEvent } from 'vs/base/browser/keyboardEvent';
-import { IJobStepsViewRow } from 'sql/workbench/services/jobManagement/common/interfaces';
 
-export class JobStepsViewRow implements IJobStepsViewRow {
+export class JobStepsViewRow {
 	public stepId: string;
 	public stepName: string;
 	public message: string;
@@ -130,7 +129,7 @@ export class JobStepsViewRenderer implements tree.IRenderer {
 		let stepMessageCol: HTMLElement = DOM.$('div');
 		stepMessageCol.className = 'tree-message-col';
 		stepMessageCol.innerText = element.message;
-		if (element.rowID.indexOf('stepsColumn') !== -1) {
+		if (element.rowID.includes('stepsColumn')) {
 			stepNameCol.className += ' step-column-heading';
 			stepIdCol.className += ' step-column-heading';
 			stepMessageCol.className += ' step-column-heading';
@@ -163,6 +162,7 @@ export class JobStepsViewRenderer implements tree.IRenderer {
 }
 
 export class JobStepsViewFilter implements tree.IFilter {
+	private _filterString: string;
 
 	public isVisible(tree: tree.ITree, element: JobStepsViewRow): boolean {
 		return this._isJobVisible();
@@ -173,5 +173,6 @@ export class JobStepsViewFilter implements tree.IFilter {
 	}
 
 	public set filterString(val: string) {
+		this._filterString = val;
 	}
 }

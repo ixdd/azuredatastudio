@@ -10,7 +10,11 @@ import { IConnectionProfile } from 'sql/platform/connection/common/interfaces';
 import { ConnectionProfile } from 'sql/platform/connection/common/connectionProfile';
 import { ConnectionManagementInfo } from 'sql/platform/connection/common/connectionManagementInfo';
 import * as azdata from 'azdata';
+<<<<<<< HEAD
 import { Event } from 'vs/base/common/event';
+=======
+import { Event, Emitter } from 'vs/base/common/event';
+>>>>>>> origin/workbenchlinting
 import { ConnectionProviderProperties } from 'sql/platform/capabilities/common/capabilitiesService';
 
 // Test stubs for commonly used objects

@@ -7,11 +7,12 @@ import { CommandsRegistry } from 'vs/platform/commands/common/commands';
 import { ServicesAccessor, IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IEditorService, ACTIVE_GROUP } from 'vs/workbench/services/editor/common/editorService';
 import { IConnectionManagementService } from 'sql/platform/connection/common/connectionManagement';
-import { ProfilerInput } from 'sql/workbench/browser/editor/profiler/profilerInput';
+import { ProfilerInput } from 'sql/workbench/contrib/profiler/browser/profilerInput';
 import * as TaskUtilities from 'sql/workbench/browser/taskUtilities';
 import { IProfilerService } from 'sql/workbench/services/profiler/browser/interfaces';
 import { KeybindingsRegistry, KeybindingWeight } from 'vs/platform/keybinding/common/keybindingsRegistry';
 import { ProfilerEditor } from 'sql/workbench/contrib/profiler/browser/profilerEditor';
+import { ObjectExplorerActionsContext } from 'sql/workbench/contrib/objectExplorer/browser/objectExplorerActions';
 import { ConnectionProfile } from 'sql/platform/connection/common/connectionProfile';
 import { ICapabilitiesService } from 'sql/platform/capabilities/common/capabilitiesService';
 import { mssqlProviderName } from 'sql/platform/connection/common/constants';
@@ -31,12 +32,9 @@ CommandsRegistry.registerCommand({
 		let capabilitiesService: ICapabilitiesService = accessor.get(ICapabilitiesService);
 
 		// If a context is available if invoked from the context menu, we will use the connection profiler of the server node
-		if (args[0]?.connectionProfile) {
-			connectionProfile = ConnectionProfile.fromIConnectionProfile(capabilitiesService, args[0].connectionProfile);
-		} else if (args[0]?.$treeItem.payload) {
-			// Because this is contributed from core it doesn't go through the argument processor that extension commands do
-			// so we just pull out the payload directly
-			connectionProfile = ConnectionProfile.fromIConnectionProfile(capabilitiesService, args[0].$treeItem.payload);
+		if (args && args.length === 1 && args[0] && args[0] instanceof ObjectExplorerActionsContext) {
+			let context = args[0] as ObjectExplorerActionsContext;
+			connectionProfile = ConnectionProfile.fromIConnectionProfile(capabilitiesService, context.connectionProfile);
 		}
 		else {
 			// No context available, we will try to get the current global active connection
@@ -85,7 +83,7 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 		let profilerService: IProfilerService = accessor.get(IProfilerService);
 		let editorService: IEditorService = accessor.get(IEditorService);
 
-		let activeEditor = editorService.activeEditorPane;
+		let activeEditor = editorService.activeControl;
 		if (activeEditor instanceof ProfilerEditor) {
 			let profilerInput = activeEditor.input;
 			if (profilerInput.state.isRunning) {

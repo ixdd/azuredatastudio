@@ -9,19 +9,21 @@ import { localize } from 'vs/nls';
 import * as types from 'vs/base/common/types';
 
 import * as Constants from 'sql/platform/connection/common/constants';
-import { registerTab, registerTabGroup } from 'sql/workbench/contrib/dashboard/browser/dashboardRegistry';
+import { registerTab } from 'sql/workbench/contrib/dashboard/browser/dashboardRegistry';
 import { generateContainerTypeSchemaProperties } from 'sql/platform/dashboard/common/dashboardContainerRegistry';
 import { NAV_SECTION, validateNavSectionContributionAndRegisterIcon } from 'sql/workbench/contrib/dashboard/browser/containers/dashboardNavSection.contribution';
 import { WIDGETS_CONTAINER, validateWidgetContainerContribution } from 'sql/workbench/contrib/dashboard/browser/containers/dashboardWidgetContainer.contribution';
 import { GRID_CONTAINER, validateGridContainerContribution } from 'sql/workbench/contrib/dashboard/browser/containers/dashboardGridContainer.contribution';
-import { values } from 'vs/base/common/collections';
-import { isValidIcon, createCSSRuleForIcon } from 'sql/workbench/contrib/dashboard/browser/dashboardIconUtil';
-import { IDashboardTabGroup, IDashboardTab } from 'sql/workbench/services/dashboard/browser/common/interfaces';
-import { IDashboardTabContrib } from 'sql/platform/extensions/common/extensions';
 
-export interface IDashboardTabGroupContrib {
+export interface IDashboardTabContrib {
 	id: string;
 	title: string;
+	container: object;
+	provider: string | string[];
+	when?: string;
+	description?: string;
+	alwaysShow?: boolean;
+	isHomeTab?: boolean;
 }
 
 const tabSchema: IJSONSchema = {
@@ -60,29 +62,6 @@ const tabSchema: IJSONSchema = {
 		isHomeTab: {
 			description: localize('azdata.extension.contributes.dashboard.tab.isHomeTab', "Whether or not this tab should be used as the Home tab for a connection type."),
 			type: 'boolean'
-		},
-		group: {
-			description: localize('azdata.extension.contributes.dashboard.tab.group', "The unique identifier of the group this tab belongs to, value for home group: home."),
-			type: 'string'
-		},
-		icon: {
-			description: localize('dazdata.extension.contributes.dashboard.tab.icon', "(Optional) Icon which is used to represent this tab in the UI. Either a file path or a themeable configuration"),
-			anyOf: [{
-				type: 'string'
-			},
-			{
-				type: 'object',
-				properties: {
-					light: {
-						description: localize('azdata.extension.contributes.dashboard.tab.icon.light', "Icon path when a light theme is used"),
-						type: 'string'
-					},
-					dark: {
-						description: localize('azdata.extension.contributes.dashboard.tab.icon.dark', "Icon path when a dark theme is used"),
-						type: 'string'
-					}
-				}
-			}]
 		}
 	}
 };
@@ -100,8 +79,8 @@ const tabContributionSchema: IJSONSchema = {
 
 ExtensionsRegistry.registerExtensionPoint<IDashboardTabContrib | IDashboardTabContrib[]>({ extensionPoint: 'dashboard.tabs', jsonSchema: tabContributionSchema }).setHandler(extensions => {
 
-	function handleTab(tab: IDashboardTabContrib, extension: IExtensionPointUser<any>) {
-		let { description, container, provider, title, when, id, alwaysShow, isHomeTab, group, icon } = tab;
+	function handleCommand(tab: IDashboardTabContrib, extension: IExtensionPointUser<any>) {
+		let { description, container, provider, title, when, id, alwaysShow, isHomeTab } = tab;
 
 		// If always show is not specified, set it to true by default.
 		if (!types.isBoolean(alwaysShow)) {
@@ -136,7 +115,7 @@ ExtensionsRegistry.registerExtensionPoint<IDashboardTabContrib | IDashboardTabCo
 
 		let result = true;
 		const containerkey = Object.keys(container)[0];
-		const containerValue = values(container)[0];
+		const containerValue = Object.values(container)[0];
 
 		switch (containerkey) {
 			case WIDGETS_CONTAINER:
@@ -150,136 +129,19 @@ ExtensionsRegistry.registerExtensionPoint<IDashboardTabContrib | IDashboardTabCo
 				break;
 		}
 
-		let iconClass = undefined;
-		if (isValidIcon(icon, extension)) {
-			iconClass = createCSSRuleForIcon(icon, extension);
-		}
 		if (result) {
-			registerTab({ description, title, container, provider, when, id, alwaysShow, publisher, isHomeTab, group, iconClass });
+			registerTab({ description, title, container, provider, when, id, alwaysShow, publisher, isHomeTab });
 		}
 	}
 
 	for (const extension of extensions) {
 		const { value } = extension;
-		if (Array.isArray(value)) {
+		if (Array.isArray<IDashboardTabContrib>(value)) {
 			for (const command of value) {
-				handleTab(command, extension);
+				handleCommand(command, extension);
 			}
 		} else {
-			handleTab(value, extension);
+			handleCommand(value, extension);
 		}
 	}
 });
-
-const tabGroupSchema: IJSONSchema = {
-	type: 'object',
-	properties: {
-		id: {
-			type: 'string',
-			description: localize('azdata.extension.contributes.dashboard.tabGroup.id', "Unique identifier for this tab group.")
-		},
-		title: {
-			type: 'string',
-			description: localize('azdata.extension.contributes.dashboard.tabGroup.title', "Title of the tab group.")
-		}
-	}
-};
-
-const tabGroupContributionSchema: IJSONSchema = {
-	description: localize('azdata.extension.contributes.tabGroups', "Contributes a single or multiple tab groups for users to add to their dashboard."),
-	oneOf: [
-		tabGroupSchema,
-		{
-			type: 'array',
-			items: tabGroupSchema
-		}
-	]
-};
-
-ExtensionsRegistry.registerExtensionPoint<IDashboardTabContrib | IDashboardTabContrib[]>({ extensionPoint: 'dashboard.tabGroups', jsonSchema: tabGroupContributionSchema }).setHandler(extensions => {
-
-	function handleTabGroup(tabgroup: IDashboardTabGroupContrib, extension: IExtensionPointUser<any>) {
-		let { id, title } = tabgroup;
-
-		if (!id) {
-			extension.collector.error(localize('dashboardTabGroup.contribution.noIdError', "No id specified for tab group."));
-			return;
-		}
-
-		if (!title) {
-			extension.collector.error(localize('dashboardTabGroup.contribution.noTitleError', "No title specified for tab group."));
-			return;
-		}
-		registerTabGroup({ id, title });
-	}
-
-	for (const extension of extensions) {
-		const { value } = extension;
-		if (Array.isArray(value)) {
-			for (const command of value) {
-				handleTabGroup(command, extension);
-			}
-		} else {
-			handleTabGroup(value, extension);
-		}
-	}
-});
-
-/**
- * Predefined tab groups
- */
-const PredefinedTabGroups: IDashboardTabGroup[] = [
-	{
-		id: 'administration',
-		title: localize('administrationTabGroup', "Administration")
-	}, {
-		id: 'monitoring',
-		title: localize('monitoringTabGroup', "Monitoring")
-	}, {
-		id: 'performance',
-		title: localize('performanceTabGroup', "Performance")
-	}, {
-		id: 'security',
-		title: localize('securityTabGroup', "Security")
-	}, {
-		id: 'troubleshooting',
-		title: localize('troubleshootingTabGroup', "Troubleshooting")
-	}, {
-		id: 'settings',
-		title: localize('settingsTabGroup', "Settings")
-	}
-];
-
-PredefinedTabGroups.forEach(tabGroup => registerTabGroup(tabGroup));
-
-/**
- * Common Tabs
- */
-const CommonTabs: IDashboardTab[] = [
-	{
-		id: 'databasesTab',
-		description: localize('databasesTabDescription', "databases tab"),
-		provider: 'MSSQL',
-		title: localize('databasesTabTitle', "Databases"),
-		when: 'dashboardContext == \'server\' && !mssql:iscloud && mssql:engineedition != 11',
-		group: 'home',
-		iconClass: 'database-colored',
-		publisher: undefined,
-		container: {
-			'widgets-container': [
-				{
-					gridItemConfig: {
-						sizex: 3,
-						sizey: 2
-					},
-					widget: {
-						'explorer-widget': {}
-					},
-					hideHeader: true
-				}
-			]
-		}
-	}
-];
-
-CommonTabs.forEach(tab => registerTab(tab));

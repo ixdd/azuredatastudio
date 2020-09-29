@@ -4,6 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as ConnectionConstants from 'sql/platform/connection/common/constants';
+<<<<<<< HEAD
+=======
+import { QueryInput } from 'sql/workbench/contrib/query/common/queryInput';
+
+>>>>>>> origin/workbenchlinting
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 
 /**

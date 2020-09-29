@@ -47,7 +47,14 @@ import { IPathService } from 'vs/workbench/services/path/common/pathService';
 import { IPath, win32, posix } from 'vs/base/common/path';
 
 // {{SQL CARBON EDIT}} -- Display the editor's tab color
+<<<<<<< HEAD
 import { IQueryEditorConfiguration } from 'sql/platform/query/common/query';
+=======
+import { ICommandService } from 'vs/platform/commands/common/commands';
+import * as QueryConstants from 'sql/workbench/contrib/query/common/constants';
+import * as WorkbenchUtils from 'sql/workbench/common/sqlWorkbenchUtils';
+import { GlobalNewUntitledFileAction } from 'vs/workbench/contrib/files/browser/fileActions';
+>>>>>>> origin/workbenchlinting
 // {{SQL CARBON EDIT}} -- End
 
 interface IEditorInputLabel {

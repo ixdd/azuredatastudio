@@ -11,8 +11,8 @@ import * as azdata from 'azdata';
 import { Component, Inject, forwardRef, ElementRef, ChangeDetectorRef, ViewChild, OnInit, OnDestroy } from '@angular/core';
 import { Table } from 'sql/base/browser/ui/table/table';
 import { AgentViewComponent } from 'sql/workbench/contrib/jobManagement/browser/agentView.component';
-import { IJobManagementService } from 'sql/workbench/services/jobManagement/common/interfaces';
-import { EditOperatorAction, DeleteOperatorAction, NewOperatorAction } from 'sql/workbench/contrib/jobManagement/browser/jobActions';
+import { IJobManagementService } from 'sql/platform/jobManagement/common/interfaces';
+import { EditOperatorAction, DeleteOperatorAction, NewOperatorAction } from 'sql/platform/jobManagement/browser/jobActions';
 import { JobManagementView } from 'sql/workbench/contrib/jobManagement/browser/jobManagementView';
 import { CommonServiceInterface } from 'sql/workbench/services/bootstrap/browser/commonServiceInterface.service';
 import { TabChild } from 'sql/base/browser/ui/panel/tab.component';
@@ -22,7 +22,7 @@ import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IAction } from 'vs/base/common/actions';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IDashboardService } from 'sql/platform/dashboard/browser/dashboardService';
-import { OperatorsCacheObject } from 'sql/workbench/services/jobManagement/common/jobManagementService';
+import { OperatorsCacheObject } from 'sql/platform/jobManagement/common/jobManagementService';
 import { RowDetailView } from 'sql/base/browser/ui/table/plugins/rowDetailView';
 
 export const VIEW_SELECTOR: string = 'joboperatorsview-component';
@@ -57,7 +57,7 @@ export class OperatorsViewComponent extends JobManagementView implements OnInit,
 	};
 
 	private dataView: any;
-	public _isCloud: boolean;
+	private _isCloud: boolean;
 	private _operatorsCacheObject: OperatorsCacheObject;
 
 	private _didTabChange: boolean;
@@ -68,6 +68,7 @@ export class OperatorsViewComponent extends JobManagementView implements OnInit,
 
 	constructor(
 		@Inject(forwardRef(() => ChangeDetectorRef)) private _cd: ChangeDetectorRef,
+		@Inject(forwardRef(() => ElementRef)) private _el: ElementRef,
 		@Inject(forwardRef(() => AgentViewComponent)) _agentViewComponent: AgentViewComponent,
 		@Inject(IJobManagementService) private _jobManagementService: IJobManagementService,
 		@Inject(ICommandService) private _commandService: ICommandService,

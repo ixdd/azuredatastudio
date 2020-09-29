@@ -5,8 +5,9 @@
 
 import { ChartInsight } from 'sql/workbench/contrib/dashboard/browser/widgets/insights/views/charts/chartInsight.component';
 import { ChangeDetectorRef, Inject, forwardRef } from '@angular/core';
+import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
-import { IAdsTelemetryService } from 'sql/platform/telemetry/common/telemetry';
+import { ILogService } from 'vs/platform/log/common/log';
 import { ChartType } from 'sql/workbench/contrib/charts/common/interfaces';
 
 export default class PieChart extends ChartInsight {
@@ -15,8 +16,9 @@ export default class PieChart extends ChartInsight {
 	constructor(
 		@Inject(forwardRef(() => ChangeDetectorRef)) _changeRef: ChangeDetectorRef,
 		@Inject(IThemeService) themeService: IThemeService,
-		@Inject(IAdsTelemetryService) telemetryService: IAdsTelemetryService
+		@Inject(ITelemetryService) telemetryService: ITelemetryService,
+		@Inject(ILogService) logService: ILogService
 	) {
-		super(_changeRef, themeService, telemetryService);
+		super(_changeRef, themeService, telemetryService, logService);
 	}
 }

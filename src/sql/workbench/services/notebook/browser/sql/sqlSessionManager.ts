@@ -5,8 +5,13 @@
 
 import { nb, IResultMessage } from 'azdata';
 import { localize } from 'vs/nls';
+<<<<<<< HEAD
 import QueryRunner from 'sql/workbench/services/query/common/queryRunner';
 import { ResultSetSummary, ResultSetSubset, IColumn, BatchSummary } from 'sql/workbench/services/query/common/query';
+=======
+import { FutureInternal, notebookConstants } from 'sql/workbench/contrib/notebook/browser/models/modelInterfaces';
+import QueryRunner from 'sql/platform/query/common/queryRunner';
+>>>>>>> origin/workbenchlinting
 import { IConnectionManagementService } from 'sql/platform/connection/common/connectionManagement';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import Severity from 'vs/base/common/severity';
@@ -15,7 +20,11 @@ import { Disposable } from 'vs/base/common/lifecycle';
 import { IErrorMessageService } from 'sql/platform/errorMessage/common/errorMessageService';
 import { ConnectionProfile } from 'sql/platform/connection/common/connectionProfile';
 import { escape } from 'sql/base/common/strings';
+<<<<<<< HEAD
 import { IConnectionProfile } from 'sql/platform/connection/common/interfaces';
+=======
+import * as notebookUtils from 'sql/workbench/contrib/notebook/browser/models/notebookUtils';
+>>>>>>> origin/workbenchlinting
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { ICapabilitiesService } from 'sql/platform/capabilities/common/capabilitiesService';
 import { ILogService } from 'vs/platform/log/common/log';

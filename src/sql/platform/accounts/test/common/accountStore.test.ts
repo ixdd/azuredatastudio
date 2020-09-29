@@ -7,7 +7,10 @@ import * as assert from 'assert';
 import * as azdata from 'azdata';
 import AccountStore from 'sql/platform/accounts/common/accountStore';
 import { EventVerifierSingle } from 'sql/base/test/common/event';
+<<<<<<< HEAD
 import { ConsoleLogService } from 'vs/platform/log/common/log';
+=======
+>>>>>>> origin/workbenchlinting
 
 const consoleLogService = new ConsoleLogService;
 suite('Account Store Tests', () => {

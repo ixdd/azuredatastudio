@@ -6,6 +6,7 @@
 import { IEditorOptions } from 'vs/editor/common/config/editorOptions';
 import * as nls from 'vs/nls';
 import * as DOM from 'vs/base/browser/dom';
+import { UntitledEditorInput } from 'vs/workbench/common/editor/untitledEditorInput';
 import { ResourceEditorModel } from 'vs/workbench/common/editor/resourceEditorModel';
 import * as editorCommon from 'vs/editor/common/editorCommon';
 
@@ -14,15 +15,16 @@ import { IInstantiationService } from 'vs/platform/instantiation/common/instanti
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { IStorageService } from 'vs/platform/storage/common/storage';
-import { ITextResourceConfigurationService } from 'vs/editor/common/services/textResourceConfigurationService';
-import { EditorOptions, IEditorOpenContext } from 'vs/workbench/common/editor';
+import { ITextResourceConfigurationService } from 'vs/editor/common/services/resourceConfiguration';
+import { ITextFileService } from 'vs/workbench/services/textfile/common/textfiles';
+import { EditorOptions } from 'vs/workbench/common/editor';
+import { StandaloneCodeEditor } from 'vs/editor/standalone/browser/standaloneCodeEditor';
 import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { CancellationToken } from 'vs/base/common/cancellation';
 import { IEditorGroupsService } from 'vs/workbench/services/editor/common/editorGroupsService';
-import { UntitledTextEditorInput } from 'vs/workbench/services/untitled/common/untitledTextEditorInput';
-import { CodeEditorWidget } from 'vs/editor/browser/widget/codeEditorWidget';
+import { IHostService } from 'vs/workbench/services/host/browser/host';
 
-class ProfilerResourceCodeEditor extends CodeEditorWidget {
+class ProfilerResourceCodeEditor extends StandaloneCodeEditor {
 
 	// protected _getContributions(): IEditorContributionCtor[] {
 	// 	let contributions = super._getContributions();
@@ -45,15 +47,17 @@ export class ProfilerResourceEditor extends BaseTextEditor {
 		@IStorageService storageService: IStorageService,
 		@ITextResourceConfigurationService configurationService: ITextResourceConfigurationService,
 		@IThemeService themeService: IThemeService,
+		@ITextFileService textFileService: ITextFileService,
 		@IEditorService protected editorService: IEditorService,
-		@IEditorGroupsService editorGroupService: IEditorGroupsService
+		@IEditorGroupsService editorGroupService: IEditorGroupsService,
+		@IHostService hostService: IHostService
 
 	) {
-		super(ProfilerResourceEditor.ID, telemetryService, instantiationService, storageService, configurationService, themeService, editorService, editorGroupService);
+		super(ProfilerResourceEditor.ID, telemetryService, instantiationService, storageService, configurationService, themeService, textFileService, editorService, editorGroupService, hostService);
 	}
 
 	public createEditorControl(parent: HTMLElement, configuration: IEditorOptions): editorCommon.IEditor {
-		return this.instantiationService.createInstance(ProfilerResourceCodeEditor, parent, configuration, {});
+		return this.instantiationService.createInstance(ProfilerResourceCodeEditor, parent, configuration);
 	}
 
 	protected getConfigurationOverrides(): IEditorOptions {
@@ -75,8 +79,8 @@ export class ProfilerResourceEditor extends BaseTextEditor {
 		return options;
 	}
 
-	setInput(input: UntitledTextEditorInput, options: EditorOptions, context: IEditorOpenContext): Promise<void> {
-		return super.setInput(input, options, context, CancellationToken.None)
+	setInput(input: UntitledEditorInput, options: EditorOptions): Promise<void> {
+		return super.setInput(input, options, CancellationToken.None)
 			.then(() => this.input.resolve()
 				.then(editorModel => editorModel.load())
 				.then(editorModel => this.getControl().setModel((<ResourceEditorModel>editorModel).textEditorModel)));

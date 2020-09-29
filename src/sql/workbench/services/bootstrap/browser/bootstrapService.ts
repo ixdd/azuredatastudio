@@ -5,17 +5,17 @@
 
 import { NgModuleRef, PlatformRef, Provider, enableProdMode } from '@angular/core';
 import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
-import { IInstantiationService, _util, ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
+import { IInstantiationService, _util } from 'vs/platform/instantiation/common/instantiation';
 import { IEditorInput } from 'vs/workbench/common/editor';
 import { Trace } from 'vs/platform/instantiation/common/instantiationService';
+import { values } from 'vs/base/common/map';
 import { IModuleFactory, IBootstrapParams } from 'sql/workbench/services/bootstrap/common/bootstrapParams';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
-import { ILogService } from 'vs/platform/log/common/log';
 
 const selectorCounter = new Map<string, number>();
 
 export function providerIterator(service: IInstantiationService): Provider[] {
-	return Array.from(_util.serviceIds.values()).map(v => {
+	return Array.from(values(_util.serviceIds)).map(v => {
 		let factory = () => {
 			return (<any>service)._getOrCreateServiceInstance(v, Trace.traceCreation(v));
 		};
@@ -29,7 +29,7 @@ export function providerIterator(service: IInstantiationService): Provider[] {
 function createUniqueSelector(selector: string): string {
 	let num: number;
 	if (selectorCounter.has(selector)) {
-		num = selectorCounter.get(selector)!;
+		num = selectorCounter.get(selector);
 	} else {
 		num = 0;
 	}
@@ -39,16 +39,14 @@ function createUniqueSelector(selector: string): string {
 
 let platform: PlatformRef;
 
-export function bootstrapAngular<T>(accessor: ServicesAccessor, moduleType: IModuleFactory<T>, container: HTMLElement, selectorString: string, params: IBootstrapParams, input?: IEditorInput, callbackSetModule?: (value: NgModuleRef<T>) => void): string {
+export function bootstrapAngular<T>(service: IInstantiationService, moduleType: IModuleFactory<T>, container: HTMLElement, selectorString: string, params: IBootstrapParams, input?: IEditorInput, callbackSetModule?: (value: NgModuleRef<T>) => void): string {
 	// Create the uniqueSelectorString
 	let uniqueSelectorString = createUniqueSelector(selectorString);
 	let selector = document.createElement(uniqueSelectorString);
 	container.appendChild(selector);
-	const instantiationService = accessor.get(IInstantiationService);
-	const logService = accessor.get(ILogService);
 
 	if (!platform) {
-		instantiationService.invokeFunction((accessor) => {
+		service.invokeFunction((accessor) => {
 			const environmentService = accessor.get(IEnvironmentService);
 			if (environmentService.isBuilt) {
 				enableProdMode();
@@ -57,7 +55,7 @@ export function bootstrapAngular<T>(accessor: ServicesAccessor, moduleType: IMod
 		platform = platformBrowserDynamic();
 	}
 
-	platform.bootstrapModule(moduleType(params, uniqueSelectorString, instantiationService)).then(moduleRef => {
+	platform.bootstrapModule(moduleType(params, uniqueSelectorString, service)).then(moduleRef => {
 		if (input) {
 			input.onDispose(() => {
 				moduleRef.destroy();
@@ -66,8 +64,6 @@ export function bootstrapAngular<T>(accessor: ServicesAccessor, moduleType: IMod
 		if (callbackSetModule) {
 			callbackSetModule(moduleRef);
 		}
-	}).catch((e) => {
-		logService.error(e);
 	});
 
 	return uniqueSelectorString;

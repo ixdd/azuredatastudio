@@ -3,14 +3,14 @@
  *  Licensed under the Source EULA. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ProfilerInput } from 'sql/workbench/browser/editor/profiler/profilerInput';
+import { ProfilerInput } from 'sql/workbench/contrib/profiler/browser/profilerInput';
 import { TabbedPanel } from 'sql/base/browser/ui/panel/panel';
 import { Table } from 'sql/base/browser/ui/table/table';
 import { TableDataView } from 'sql/base/browser/ui/table/tableDataView';
 import { IProfilerService, IProfilerViewTemplate } from 'sql/workbench/services/profiler/browser/interfaces';
 import { Taskbar } from 'sql/base/browser/ui/taskbar/taskbar';
-import { attachTableStyler } from 'sql/platform/theme/common/styler';
-import { IProfilerStateChangedEvent } from 'sql/workbench/common/editor/profiler/profilerState';
+import { attachTableStyler, attachTabbedPanelStyler } from 'sql/platform/theme/common/styler';
+import { IProfilerStateChangedEvent } from 'sql/workbench/contrib/profiler/common/profilerState';
 import { ProfilerTableEditor, ProfilerTableViewState } from 'sql/workbench/contrib/profiler/browser/profilerTableEditor';
 import * as Actions from 'sql/workbench/contrib/profiler/browser/profilerActions';
 import { CONTEXT_PROFILER_EDITOR, PROFILER_TABLE_COMMAND_SEARCH } from 'sql/workbench/contrib/profiler/common/interfaces';
@@ -20,6 +20,7 @@ import { ProfilerResourceEditor } from 'sql/workbench/contrib/profiler/browser/p
 import { IContextViewService } from 'vs/platform/contextview/browser/contextView';
 import { ITextModel } from 'vs/editor/common/model';
 import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
+import { UntitledEditorInput } from 'vs/workbench/common/editor/untitledEditorInput';
 import { URI } from 'vs/base/common/uri';
 import { Schemas } from 'vs/base/common/network';
 import * as nls from 'vs/nls';
@@ -38,7 +39,7 @@ import { CancellationToken } from 'vs/base/common/cancellation';
 import { IStorageService } from 'vs/platform/storage/common/storage';
 import { IView, SplitView, Sizing } from 'vs/base/browser/ui/splitview/splitview';
 import * as DOM from 'vs/base/browser/dom';
-import { EditorPane } from 'vs/workbench/browser/parts/editor/editorPane';
+import { BaseEditor } from 'vs/workbench/browser/parts/editor/baseEditor';
 import { EditorOptions } from 'vs/workbench/common/editor';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IWorkbenchThemeService, VS_DARK_THEME, VS_HC_THEME } from 'vs/workbench/services/themes/common/workbenchThemeService';
@@ -49,11 +50,7 @@ import { CopyKeybind } from 'sql/base/browser/ui/table/plugins/copyKeybind.plugi
 import { IClipboardService } from 'sql/platform/clipboard/common/clipboardService';
 import { CellSelectionModel } from 'sql/base/browser/ui/table/plugins/cellSelectionModel.plugin';
 import { handleCopyRequest } from 'sql/workbench/contrib/profiler/browser/profilerCopyHandler';
-import { ITextResourcePropertiesService } from 'vs/editor/common/services/textResourceConfigurationService';
-import { find } from 'vs/base/common/arrays';
-import { UntitledTextEditorInput } from 'vs/workbench/services/untitled/common/untitledTextEditorInput';
-import { attachTabbedPanelStyler } from 'sql/workbench/common/styler';
-import { UntitledTextEditorModel } from 'vs/workbench/services/untitled/common/untitledTextEditorModel';
+import { ITextResourcePropertiesService } from 'vs/editor/common/services/resourceConfiguration';
 
 class BasicView implements IView {
 	public get element(): HTMLElement {
@@ -117,13 +114,12 @@ export interface IDetailData {
 	value: string;
 }
 
-export class ProfilerEditor extends EditorPane {
+export class ProfilerEditor extends BaseEditor {
 	public static readonly ID: string = 'workbench.editor.profiler';
 
-	private _untitledTextEditorModel: UntitledTextEditorModel;
 	private _editor: ProfilerResourceEditor;
 	private _editorModel: ITextModel;
-	private _editorInput: UntitledTextEditorInput;
+	private _editorInput: UntitledEditorInput;
 	private _splitView: SplitView;
 	private _container: HTMLElement;
 	private _body: HTMLElement;
@@ -173,13 +169,11 @@ export class ProfilerEditor extends EditorPane {
 		this._profilerEditorContextKey = CONTEXT_PROFILER_EDITOR.bindTo(this._contextKeyService);
 
 		if (editorService) {
-			editorService.overrideOpenEditor({
-				open: (editor, options, group) => {
-					if (this.isVisible() && (editor !== this.input || group !== this.group)) {
-						this.saveEditorViewState();
-					}
-					return {};
+			editorService.overrideOpenEditor((editor, options, group) => {
+				if (this.isVisible() && (editor !== this.input || group !== this.group)) {
+					this.saveEditorViewState();
 				}
+				return {};
 			});
 		}
 	}
@@ -239,7 +233,7 @@ export class ProfilerEditor extends EditorPane {
 		this._viewTemplateSelector.setAriaLabel(nls.localize('profiler.viewSelectAccessibleName', "Select View"));
 		this._register(this._viewTemplateSelector.onDidSelect(e => {
 			if (this.input) {
-				this.input.setViewTemplate(find(this._viewTemplates, i => i.name === e.selected));
+				this.input.viewTemplate = this._viewTemplates.find(i => i.name === e.selected);
 			}
 		}));
 		let viewTemplateContainer = document.createElement('div');
@@ -252,7 +246,7 @@ export class ProfilerEditor extends EditorPane {
 		this._sessionSelector.setAriaLabel(nls.localize('profiler.sessionSelectAccessibleName', "Select Session"));
 		this._register(this._sessionSelector.onDidSelect(e => {
 			if (this.input) {
-				this.input.setSessionName(e.selected);
+				this.input.sessionName = e.selected;
 			}
 		}));
 		let sessionsContainer = document.createElement('div');
@@ -300,13 +294,13 @@ export class ProfilerEditor extends EditorPane {
 		profilerTableContainer.style.height = '100%';
 		profilerTableContainer.style.overflow = 'hidden';
 		profilerTableContainer.style.position = 'relative';
-		let theme = this.themeService.getColorTheme();
+		let theme = this.themeService.getTheme();
 		if (theme.type === DARK) {
 			DOM.addClass(profilerTableContainer, VS_DARK_THEME);
 		} else if (theme.type === HIGH_CONTRAST) {
 			DOM.addClass(profilerTableContainer, VS_HC_THEME);
 		}
-		this.themeService.onDidColorThemeChange(e => {
+		this.themeService.onThemeChange(e => {
 			DOM.removeClasses(profilerTableContainer, VS_DARK_THEME, VS_HC_THEME);
 			if (e.type === DARK) {
 				DOM.addClass(profilerTableContainer, VS_DARK_THEME);
@@ -320,7 +314,6 @@ export class ProfilerEditor extends EditorPane {
 			let data = this.input.data.getItem(args.rows[0]);
 			if (data) {
 				this._modelService.updateModel(this._editorModel, data['TextData']);
-				this._untitledTextEditorModel.setDirty(false);
 				this._detailTableData.clear();
 				this._detailTableData.push(Object.keys(data).filter(key => {
 					return data[key] !== ' ';
@@ -397,7 +390,7 @@ export class ProfilerEditor extends EditorPane {
 			this._detailTable.updateRowCount();
 		});
 
-		const detailTableCopyKeybind = new CopyKeybind<IDetailData>();
+		const detailTableCopyKeybind = new CopyKeybind();
 		detailTableCopyKeybind.onCopy((ranges: Slick.Range[]) => {
 			// we always only get 1 item in the ranges
 			if (ranges && ranges.length === 1) {
@@ -438,9 +431,8 @@ export class ProfilerEditor extends EditorPane {
 		editorContainer.className = 'profiler-editor';
 		this._editor.create(editorContainer);
 		this._editor.setVisible(true);
-		this._untitledTextEditorModel = this._instantiationService.createInstance(UntitledTextEditorModel, URI.from({ scheme: Schemas.untitled }), false, undefined, 'sql', undefined);
-		this._editorInput = this._instantiationService.createInstance(UntitledTextEditorInput, this._untitledTextEditorModel);
-		this._editor.setInput(this._editorInput, undefined, undefined);
+		this._editorInput = this._instantiationService.createInstance(UntitledEditorInput, URI.from({ scheme: Schemas.untitled }), false, 'sql', '', '');
+		this._editor.setInput(this._editorInput, undefined);
 		this._editorInput.resolve().then(model => this._editorModel = model.textEditorModel);
 		return editorContainer;
 	}
@@ -460,13 +452,13 @@ export class ProfilerEditor extends EditorPane {
 			return Promise.resolve(null);
 		}
 
-		return super.setInput(input, options, undefined, CancellationToken.None).then(() => {
+		return super.setInput(input, options, CancellationToken.None).then(() => {
 			this._profilerTableEditor.setInput(input);
 
 			if (input.viewTemplate) {
 				this._viewTemplateSelector.selectWithOptionName(input.viewTemplate.name);
 			} else {
-				input.setViewTemplate(find(this._viewTemplates, i => i.name === 'Standard View'));
+				input.viewTemplate = this._viewTemplates.find(i => i.name === 'Standard View');
 			}
 
 			this._actionBar.context = input;
@@ -506,8 +498,7 @@ export class ProfilerEditor extends EditorPane {
 					seedSearchStringFromSelection: (controller.getState().searchString.length === 0),
 					shouldFocus: FindStartFocusAction.FocusFindInput,
 					shouldAnimate: true,
-					updateSearchScope: false,
-					loop: true
+					updateSearchScope: false
 				});
 			}
 		} else {
@@ -581,11 +572,11 @@ export class ProfilerEditor extends EditorPane {
 			this._sessionsList = r;
 			if (this._sessionsList.length > 0) {
 				if (!this.input.sessionName) {
-					this.input.setSessionName(previousSessionName);
+					this.input.sessionName = previousSessionName;
 				}
 
 				if (this._sessionsList.indexOf(this.input.sessionName) === -1) {
-					this.input.setSessionName(this._sessionsList[0]);
+					this.input.sessionName = this._sessionsList[0];
 				}
 
 				this._sessionSelector.selectWithOptionName(this.input.sessionName);
@@ -628,7 +619,7 @@ export class ProfilerEditor extends EditorPane {
 abstract class SettingsCommand extends Command {
 
 	protected getProfilerEditor(accessor: ServicesAccessor): ProfilerEditor {
-		const activeEditor = accessor.get(IEditorService).activeEditorPane;
+		const activeEditor = accessor.get(IEditorService).activeControl;
 		if (activeEditor instanceof ProfilerEditor) {
 			return activeEditor;
 		}

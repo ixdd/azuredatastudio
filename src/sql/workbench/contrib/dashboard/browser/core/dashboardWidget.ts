@@ -3,13 +3,11 @@
  *  Licensed under the Source EULA. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { InjectionToken, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { InjectionToken, OnDestroy } from '@angular/core';
 import { NgGridItemConfig } from 'angular2-grid';
 import { Action } from 'vs/base/common/actions';
 import { Disposable } from 'vs/base/common/lifecycle';
-import { TabType } from 'sql/base/browser/ui/panel/tab.component';
-import { IDashboardTab } from 'sql/workbench/services/dashboard/browser/common/interfaces';
-import { IUserFriendlyIcon } from 'sql/platform/extensions/common/extensions';
+import { IDashboardTab } from 'sql/workbench/contrib/dashboard/browser/dashboardRegistry';
 
 export interface IDashboardWidget {
 	actions: Array<Action>;
@@ -29,13 +27,12 @@ export interface WidgetConfig {
 	edition: number | Array<number>;
 	when?: string;
 	gridItemConfig?: NgGridItemConfig;
-	widget: { [key: string]: any };
+	widget: Object;
 	background_color?: string;
 	border?: string;
 	fontSize?: string;
 	fontWeight?: string;
 	padding?: string;
-	hideHeader?: boolean;
 }
 
 export interface TabConfig extends IDashboardTab {
@@ -44,17 +41,17 @@ export interface TabConfig extends IDashboardTab {
 	editable: boolean;
 	canClose: boolean;
 	actions?: Array<Action>;
-	type?: TabType;
+	iconClass?: string;
 }
 
-
+export type IUserFriendlyIcon = string | { light: string; dark: string; };
 
 export interface NavSectionConfig {
 	id: string;
 	title: string;
 	iconClass?: string;
 	icon?: IUserFriendlyIcon;
-	container: { [key: string]: any };
+	container: object;
 }
 
 export interface TabSettingConfig {
@@ -64,14 +61,6 @@ export interface TabSettingConfig {
 
 export abstract class DashboardWidget extends Disposable implements OnDestroy {
 	protected _config: WidgetConfig;
-	protected _loading: boolean;
-	protected _inited: boolean = false;
-	protected _loadingMessage: string;
-	protected _loadingCompletedMessage: string;
-
-	constructor(protected _changeRef: ChangeDetectorRef) {
-		super();
-	}
 
 	get actions(): Array<Action> {
 		return [];
@@ -79,12 +68,5 @@ export abstract class DashboardWidget extends Disposable implements OnDestroy {
 
 	ngOnDestroy() {
 		this.dispose();
-	}
-
-	protected setLoadingStatus(loading: boolean): void {
-		this._loading = loading;
-		if (this._inited) {
-			this._changeRef.detectChanges();
-		}
 	}
 }

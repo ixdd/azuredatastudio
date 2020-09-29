@@ -6,7 +6,7 @@
 import 'vs/css!./media/jobStepsView';
 import * as nls from 'vs/nls';
 import * as dom from 'vs/base/browser/dom';
-import { OnInit, Component, Inject, forwardRef, ElementRef, ViewChild, AfterContentChecked } from '@angular/core';
+import { OnInit, Component, Inject, forwardRef, ElementRef, ChangeDetectorRef, ViewChild, AfterContentChecked } from '@angular/core';
 import { attachListStyler } from 'vs/platform/theme/common/styler';
 import { Tree } from 'vs/base/parts/tree/browser/treeImpl';
 import { ScrollbarVisibility } from 'vs/base/common/scrollable';
@@ -14,7 +14,7 @@ import { IWorkbenchThemeService } from 'vs/workbench/services/themes/common/work
 import { CommonServiceInterface } from 'sql/workbench/services/bootstrap/browser/commonServiceInterface.service';
 import {
 	JobStepsViewController, JobStepsViewDataSource, JobStepsViewFilter,
-	JobStepsViewRenderer, JobStepsViewModel, JobStepsViewRow
+	JobStepsViewRenderer, JobStepsViewModel
 } from 'sql/workbench/contrib/jobManagement/browser/jobStepsViewTree';
 import { JobHistoryComponent } from 'sql/workbench/contrib/jobManagement/browser/jobHistory.component';
 import { JobManagementView } from 'sql/workbench/contrib/jobManagement/browser/jobManagementView';
@@ -25,7 +25,6 @@ import { IInstantiationService } from 'vs/platform/instantiation/common/instanti
 import { TabChild } from 'sql/base/browser/ui/panel/tab.component';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import * as TelemetryKeys from 'sql/platform/telemetry/common/telemetryKeys';
-import { IJobManagementService } from 'sql/workbench/services/jobManagement/common/interfaces';
 
 export const JOBSTEPSVIEW_SELECTOR: string = 'jobstepsview-component';
 
@@ -45,9 +44,10 @@ export class JobStepsViewComponent extends JobManagementView implements OnInit, 
 	@ViewChild('table') private _tableContainer: ElementRef;
 
 	constructor(
+		@Inject(forwardRef(() => ElementRef)) el: ElementRef,
+		@Inject(forwardRef(() => ChangeDetectorRef)) private _cd: ChangeDetectorRef,
 		@Inject(forwardRef(() => CommonServiceInterface)) commonService: CommonServiceInterface,
 		@Inject(forwardRef(() => JobHistoryComponent)) private _jobHistoryComponent: JobHistoryComponent,
-		@Inject(IJobManagementService) private _jobManagementService: IJobManagementService,
 		@Inject(IWorkbenchThemeService) private themeService: IWorkbenchThemeService,
 		@Inject(IInstantiationService) instantiationService: IInstantiationService,
 		@Inject(IContextMenuService) contextMenuService: IContextMenuService,
@@ -107,10 +107,6 @@ export class JobStepsViewComponent extends JobManagementView implements OnInit, 
 		this._register(attachListStyler(this._tree, this.themeService));
 		const stepsTooltip = nls.localize('agent.steps', "Steps");
 		jQuery('.steps-header > .steps-icon').attr('title', stepsTooltip);
-		this._jobManagementService.stepsChanged(async (data: JobStepsViewRow[]) => {
-			this._treeDataSource.data = data;
-			await this._tree.refresh();
-		});
 		this._telemetryService.publicLog(TelemetryKeys.JobStepsView);
 	}
 

@@ -5,14 +5,26 @@
 
 import { ConnectionProfile } from 'sql/platform/connection/common/connectionProfile';
 import { ConnectionProfileGroup } from 'sql/platform/connection/common/connectionProfileGroup';
+<<<<<<< HEAD
 import { ObjectExplorerService, NodeExpandInfoWithProviderId, IServerTreeView } from 'sql/workbench/services/objectExplorer/browser/objectExplorerService';
 import { NodeType } from 'sql/workbench/services/objectExplorer/common/nodeType';
 import { TreeNode, TreeItemCollapsibleState } from 'sql/workbench/services/objectExplorer/common/treeNode';
+=======
+import { ObjectExplorerService, NodeExpandInfoWithProviderId } from 'sql/workbench/services/objectExplorer/browser/objectExplorerService';
+import { NodeType } from 'sql/workbench/contrib/objectExplorer/common/nodeType';
+import { TreeNode, TreeItemCollapsibleState } from 'sql/workbench/contrib/objectExplorer/common/treeNode';
+>>>>>>> origin/workbenchlinting
 
 import * as azdata from 'azdata';
 import * as TypeMoq from 'typemoq';
 import * as assert from 'assert';
+<<<<<<< HEAD
 import { Event } from 'vs/base/common/event';
+=======
+import { ServerTreeView } from 'sql/workbench/contrib/objectExplorer/browser/serverTreeView';
+import { ConnectionOptionSpecialType, ServiceOptionType } from 'sql/workbench/api/common/sqlExtHostTypes';
+import { Event, Emitter } from 'vs/base/common/event';
+>>>>>>> origin/workbenchlinting
 import { mssqlProviderName } from 'sql/platform/connection/common/constants';
 import { NullLogService } from 'vs/platform/log/common/log';
 import { TestObjectExplorerProvider } from 'sql/workbench/services/objectExplorer/test/common/testObjectExplorerProvider';

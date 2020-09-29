@@ -4,8 +4,23 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IConnectionProfile } from 'sql/platform/connection/common/interfaces';
+<<<<<<< HEAD
 import { IConnectionManagementService } from 'sql/platform/connection/common/connectionManagement';
 import { IObjectExplorerService } from 'sql/workbench/services/objectExplorer/browser/objectExplorerService';
+=======
+import {
+	IConnectionManagementService,
+	IConnectionCompletionOptions, ConnectionType,
+	RunQueryOnConnectionMode, IConnectionResult
+} from 'sql/platform/connection/common/connectionManagement';
+import { EditDataInput } from 'sql/workbench/contrib/editData/browser/editDataInput';
+import { IInsightsDialogService } from 'sql/workbench/services/insights/browser/insightsDialogService';
+import { IObjectExplorerService } from 'sql/workbench/services/objectExplorer/browser/objectExplorerService';
+import { QueryInput } from 'sql/workbench/contrib/query/common/queryInput';
+import { DashboardInput } from 'sql/workbench/contrib/dashboard/browser/dashboardInput';
+import { ProfilerInput } from 'sql/workbench/contrib/profiler/browser/profilerInput';
+
+>>>>>>> origin/workbenchlinting
 import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { DashboardInput } from 'sql/workbench/browser/editor/profiler/dashboardInput';
 

@@ -3,26 +3,26 @@
  *  Licensed under the Source EULA. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { QueryResultsInput } from 'sql/workbench/common/editor/query/queryResultsInput';
+import { QueryResultsInput } from 'sql/workbench/contrib/query/common/queryResultsInput';
 import { TabbedPanel, IPanelTab, IPanelView } from 'sql/base/browser/ui/panel/panel';
-import { IQueryModelService } from 'sql/workbench/services/query/common/queryModel';
-import QueryRunner from 'sql/workbench/services/query/common/queryRunner';
+import { IQueryModelService } from 'sql/platform/query/common/queryModel';
+import QueryRunner from 'sql/platform/query/common/queryRunner';
 import { MessagePanel } from 'sql/workbench/contrib/query/browser/messagePanel';
 import { GridPanel } from 'sql/workbench/contrib/query/browser/gridPanel';
 import { ChartTab } from 'sql/workbench/contrib/charts/browser/chartTab';
 import { QueryPlanTab } from 'sql/workbench/contrib/queryPlan/browser/queryPlan';
 import { TopOperationsTab } from 'sql/workbench/contrib/queryPlan/browser/topOperations';
 import { QueryModelViewTab } from 'sql/workbench/contrib/query/browser/modelViewTab/queryModelViewTab';
-import { GridPanelState } from 'sql/workbench/common/editor/query/gridTableState';
+import { MessagePanelState } from 'sql/workbench/contrib/query/common/messagePanelState';
+import { GridPanelState } from 'sql/workbench/contrib/query/common/gridPanelState';
 
 import * as nls from 'vs/nls';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import * as DOM from 'vs/base/browser/dom';
 import { dispose, Disposable, DisposableStore } from 'vs/base/common/lifecycle';
+import { attachTabbedPanelStyler } from 'sql/platform/theme/common/styler';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { Event } from 'vs/base/common/event';
-import { URI } from 'vs/base/common/uri';
-import { attachTabbedPanelStyler } from 'sql/workbench/common/styler';
 
 class MessagesView extends Disposable implements IPanelView {
 	private messagePanel: MessagePanel;
@@ -59,13 +59,17 @@ class MessagesView extends Disposable implements IPanelView {
 	public set queryRunner(runner: QueryRunner) {
 		this.messagePanel.queryRunner = runner;
 	}
+
+	public set state(val: MessagePanelState) {
+		this.messagePanel.state = val;
+	}
 }
 
 class ResultsView extends Disposable implements IPanelView {
 	private gridPanel: GridPanel;
 	private container = document.createElement('div');
-	private _state: GridPanelState | undefined;
-	private _runner: QueryRunner | undefined;
+	private _state: GridPanelState;
+	private _runner: QueryRunner;
 
 	constructor(private instantiationService: IInstantiationService) {
 		super();
@@ -103,9 +107,7 @@ class ResultsView extends Disposable implements IPanelView {
 	onShow(): void {
 		if (this._state) {
 			this.state = this._state;
-			if (this._runner) {
-				this.queryRunner = this._runner;
-			}
+			this.queryRunner = this._runner;
 		}
 	}
 
@@ -164,7 +166,7 @@ class MessagesTab implements IPanelTab {
 
 export class QueryResultsView extends Disposable {
 	private _panelView: TabbedPanel;
-	private _input: QueryResultsInput | undefined;
+	private _input: QueryResultsInput;
 	private resultsTab: ResultsTab;
 	private messagesTab: MessagesTab;
 	private chartTab: ChartTab;
@@ -210,7 +212,7 @@ export class QueryResultsView extends Disposable {
 	}
 
 	private setQueryRunner(runner: QueryRunner) {
-		const activeTab = this._input?.state.activeTab;
+		const activeTab = this._input.state.activeTab;
 		if (this.hasResults(runner)) {
 			this.showResults();
 		} else {
@@ -228,32 +230,30 @@ export class QueryResultsView extends Disposable {
 			this.hideChart();
 			this.hidePlan();
 			this.hideDynamicViewModelTabs();
-			this.input?.state.visibleTabs.clear();
-			if (this.input) {
-				this.input.state.activeTab = this.resultsTab.identifier;
-			}
+			this.input.state.visibleTabs.clear();
+			this.input.state.activeTab = this.resultsTab.identifier;
 		}));
 		this.runnerDisposables.add(runner.onQueryEnd(() => {
-			if (runner.messages.some(v => v.isError)) {
+			if (runner.messages.find(v => v.isError)) {
 				this._panelView.showTab(this.messagesTab.identifier);
 			}
 		}));
 
-		if (this.input?.state.visibleTabs.has(this.chartTab.identifier) && !this._panelView.contains(this.chartTab)) {
+		if (this.input.state.visibleTabs.has(this.chartTab.identifier) && !this._panelView.contains(this.chartTab)) {
 			this._panelView.pushTab(this.chartTab);
-		} else if (!this.input?.state.visibleTabs.has(this.chartTab.identifier) && this._panelView.contains(this.chartTab)) {
+		} else if (!this.input.state.visibleTabs.has(this.chartTab.identifier) && this._panelView.contains(this.chartTab)) {
 			this._panelView.removeTab(this.chartTab.identifier);
 		}
 
-		if (this.input?.state.visibleTabs.has(this.qpTab.identifier) && !this._panelView.contains(this.qpTab)) {
+		if (this.input.state.visibleTabs.has(this.qpTab.identifier) && !this._panelView.contains(this.qpTab)) {
 			this._panelView.pushTab(this.qpTab);
-		} else if (!this.input?.state.visibleTabs.has(this.qpTab.identifier) && this._panelView.contains(this.qpTab)) {
+		} else if (!this.input.state.visibleTabs.has(this.qpTab.identifier) && this._panelView.contains(this.qpTab)) {
 			this._panelView.removeTab(this.qpTab.identifier);
 		}
 
-		if (this.input?.state.visibleTabs.has(this.topOperationsTab.identifier) && !this._panelView.contains(this.topOperationsTab)) {
+		if (this.input.state.visibleTabs.has(this.topOperationsTab.identifier) && !this._panelView.contains(this.topOperationsTab)) {
 			this._panelView.pushTab(this.topOperationsTab);
-		} else if (!this.input?.state.visibleTabs.has(this.topOperationsTab.identifier) && this._panelView.contains(this.topOperationsTab)) {
+		} else if (!this.input.state.visibleTabs.has(this.topOperationsTab.identifier) && this._panelView.contains(this.topOperationsTab)) {
 			this._panelView.removeTab(this.topOperationsTab.identifier);
 		}
 
@@ -265,7 +265,7 @@ export class QueryResultsView extends Disposable {
 		});
 		this.dynamicModelViewTabs = [];
 
-		this.input?.state.visibleTabs.forEach(tabId => {
+		this.input.state.visibleTabs.forEach(tabId => {
 			if (tabId.startsWith('querymodelview;')) {
 				// tab id format is 'tab type;title;model view id'
 				let parts = tabId.split(';');
@@ -294,42 +294,42 @@ export class QueryResultsView extends Disposable {
 		}
 	}
 
-	public set input(input: QueryResultsInput | undefined) {
+	public set input(input: QueryResultsInput) {
 		this._input = input;
-		this.runnerDisposables.clear();
+		this.runnerDisposables.dispose();
+		this.runnerDisposables = new DisposableStore();
 
 		[this.resultsTab, this.messagesTab, this.qpTab, this.topOperationsTab, this.chartTab].forEach(t => t.clear());
 		this.dynamicModelViewTabs.forEach(t => t.clear());
 
-		if (input) {
-			this.resultsTab.view.state = input.state.gridPanelState;
-			this.qpTab.view.setState(input.state.queryPlanState);
-			this.topOperationsTab.view.setState(input.state.topOperationsState);
-			this.chartTab.view.state = input.state.chartState;
-			this.dynamicModelViewTabs.forEach((dynamicTab: QueryModelViewTab) => {
-				dynamicTab.captureState(input.state.dynamicModelViewTabsState);
+		this.resultsTab.view.state = this.input.state.gridPanelState;
+		this.messagesTab.view.state = this.input.state.messagePanelState;
+		this.qpTab.view.state = this.input.state.queryPlanState;
+		this.topOperationsTab.view.state = this.input.state.topOperationsState;
+		this.chartTab.view.state = this.input.state.chartState;
+		this.dynamicModelViewTabs.forEach((dynamicTab: QueryModelViewTab) => {
+			dynamicTab.captureState(this.input.state.dynamicModelViewTabsState);
+		});
+
+		let info = this.queryModelService._getQueryInfo(input.uri);
+		if (info) {
+			this.setQueryRunner(info.queryRunner);
+		} else {
+			let disposable = this.queryModelService.onRunQueryStart(c => {
+				if (c === input.uri) {
+					let info = this.queryModelService._getQueryInfo(input.uri);
+					this.setQueryRunner(info.queryRunner);
+					disposable.dispose();
+				}
 			});
-			let info = this.queryModelService._getQueryInfo(input.uri) || this.queryModelService._getQueryInfo(URI.parse(input.uri).toString(true));
-			if (info?.queryRunner) {
-				this.setQueryRunner(info.queryRunner);
-			} else {
-				let disposable = this.queryModelService.onRunQueryStart(c => {
-					if (URI.parse(c).toString() === URI.parse(input.uri).toString()) {
-						let info = this.queryModelService._getQueryInfo(c);
-						if (info?.queryRunner) {
-							this.setQueryRunner(info.queryRunner);
-						}
-						disposable.dispose();
-					}
-				});
-				this.runnerDisposables.add(disposable);
-			}
+			this.runnerDisposables.add(disposable);
 		}
 	}
 
 	clearInput() {
 		this._input = undefined;
-		this.runnerDisposables.clear();
+		this.runnerDisposables.dispose();
+		this.runnerDisposables = new DisposableStore();
 		this.resultsTab.clear();
 		this.messagesTab.clear();
 		this.qpTab.clear();
@@ -338,7 +338,7 @@ export class QueryResultsView extends Disposable {
 		this.dynamicModelViewTabs.forEach(t => t.clear());
 	}
 
-	public get input(): QueryResultsInput | undefined {
+	public get input(): QueryResultsInput {
 		return this._input;
 	}
 
@@ -347,7 +347,7 @@ export class QueryResultsView extends Disposable {
 	}
 
 	public chartData(dataId: { resultId: number, batchId: number }): void {
-		this.input?.state.visibleTabs.add(this.chartTab.identifier);
+		this.input.state.visibleTabs.add(this.chartTab.identifier);
 		if (!this._panelView.contains(this.chartTab)) {
 			this._panelView.pushTab(this.chartTab);
 		}
@@ -376,11 +376,11 @@ export class QueryResultsView extends Disposable {
 	}
 
 	public showPlan(xml: string) {
-		this.input?.state.visibleTabs.add(this.qpTab.identifier);
+		this.input.state.visibleTabs.add(this.qpTab.identifier);
 		if (!this._panelView.contains(this.qpTab)) {
 			this._panelView.pushTab(this.qpTab);
 		}
-		this.input?.state.visibleTabs.add(this.topOperationsTab.identifier);
+		this.input.state.visibleTabs.add(this.topOperationsTab.identifier);
 		if (!this._panelView.contains(this.topOperationsTab)) {
 			this._panelView.pushTab(this.topOperationsTab);
 		}
@@ -421,13 +421,11 @@ export class QueryResultsView extends Disposable {
 		tab.view.componentId = componentId;
 		this.dynamicModelViewTabs.push(tab);
 
-		this.input?.state.visibleTabs.add('querymodelview;' + title + ';' + componentId);
+		this.input.state.visibleTabs.add('querymodelview;' + title + ';' + componentId);
 		if (!this._panelView.contains(tab)) {
 			this._panelView.pushTab(tab, undefined, true);
 		}
 
-		if (this.input) {
-			tab.putState(this.input.state.dynamicModelViewTabsState);
-		}
+		tab.putState(this.input.state.dynamicModelViewTabsState);
 	}
 }

@@ -5,8 +5,12 @@
 
 import { Event, Emitter } from 'vs/base/common/event';
 
+<<<<<<< HEAD
 import { IDashboardTab } from 'sql/workbench/services/dashboard/browser/common/interfaces';
 import { find } from 'vs/base/common/arrays';
+=======
+import { IDashboardTab } from 'sql/workbench/contrib/dashboard/browser/dashboardRegistry';
+>>>>>>> origin/workbenchlinting
 
 
 export interface IDashboardUITab {

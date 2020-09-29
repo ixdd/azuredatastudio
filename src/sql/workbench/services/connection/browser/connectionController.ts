@@ -5,7 +5,11 @@
 
 import { IConnectionManagementService } from 'sql/platform/connection/common/connectionManagement';
 import { IConnectionComponentCallbacks, IConnectionComponentController, IConnectionValidateResult } from 'sql/workbench/services/connection/browser/connectionDialogService';
+<<<<<<< HEAD
 import { AdvancedPropertiesController } from 'sql/workbench/services/connection/browser/advancedPropertiesController';
+=======
+import { AdvancedPropertiesController } from 'sql/workbench/contrib/connection/browser/advancedPropertiesController';
+>>>>>>> origin/workbenchlinting
 import { IConnectionProfile } from 'sql/platform/connection/common/interfaces';
 import { ConnectionProfileGroup, IConnectionProfileGroup } from 'sql/platform/connection/common/connectionProfileGroup';
 import * as Constants from 'sql/platform/connection/common/constants';
@@ -17,8 +21,11 @@ import { ConnectionWidget } from 'sql/workbench/services/connection/browser/conn
 import { IServerGroupController } from 'sql/platform/serverGroup/common/serverGroupController';
 import { ILogService } from 'vs/platform/log/common/log';
 import { ConnectionProviderProperties } from 'sql/platform/capabilities/common/capabilitiesService';
+<<<<<<< HEAD
 import { assign } from 'vs/base/common/objects';
 import { find } from 'vs/base/common/arrays';
+=======
+>>>>>>> origin/workbenchlinting
 
 export class ConnectionController implements IConnectionComponentController {
 	private _advancedController: AdvancedPropertiesController;

@@ -5,7 +5,7 @@
 
 import 'vs/css!./dashboardGridContainer';
 
-import { Component, Inject, Input, forwardRef, ElementRef, ViewChildren, QueryList, OnDestroy, ChangeDetectorRef, ViewChild } from '@angular/core';
+import { Component, Inject, Input, forwardRef, ElementRef, ViewChildren, QueryList, OnDestroy, ChangeDetectorRef, ContentChild } from '@angular/core';
 
 import { CommonServiceInterface } from 'sql/workbench/services/bootstrap/browser/commonServiceInterface.service';
 import { TabConfig, WidgetConfig } from 'sql/workbench/contrib/dashboard/browser/core/dashboardWidget';
@@ -15,9 +15,8 @@ import { WebviewContent } from 'sql/workbench/contrib/dashboard/browser/contents
 import { TabChild } from 'sql/base/browser/ui/panel/tab.component';
 
 import { Event, Emitter } from 'vs/base/common/event';
+import { ScrollbarVisibility } from 'vs/editor/common/standalone/standaloneEnums';
 import { ScrollableDirective } from 'sql/base/browser/ui/scrollable/scrollable.directive';
-import { values } from 'vs/base/common/collections';
-import { ScrollbarVisibility } from 'vs/base/common/scrollable';
 
 export interface GridCellConfig {
 	id?: string;
@@ -45,35 +44,7 @@ export interface GridModelViewConfig extends GridCellConfig {
 
 @Component({
 	selector: 'dashboard-grid-container',
-	template: `
-		<div class="fullsize" style="display: flex; flex-direction: column">
-		<div scrollable [horizontalScroll]="${ScrollbarVisibility.Auto}" [verticalScroll]="${ScrollbarVisibility.Auto}">
-		<table class="grid-table">
-			<tr *ngFor="let row of rows" class="grid-table-row">
-				<ng-container *ngFor="let col of cols">
-					<ng-container *ngIf="getContent(row,col) !== undefined">
-						<td class="table-cell" [colSpan]=getColspan(row,col) [rowSpan]=getRowspan(row,col)
-							[width]="getWidgetWidth(row,col)" [height]="getWidgetHeight(row,col)">
-
-							<dashboard-widget-wrapper *ngIf="isWidget(row,col)" [_config]="getWidgetContent(row,col)"
-								style="position:absolute;" [style.width]="getWidgetWidth(row,col)"
-								[style.height]="getWidgetHeight(row,col)">
-							</dashboard-widget-wrapper>
-
-							<webview-content *ngIf="isWebview(row,col)" [webviewId]="getWebviewId(row,col)">
-							</webview-content>
-
-							<modelview-content *ngIf="isModelView(row,col)" [modelViewId]="getModelViewId(row,col)">
-							</modelview-content>
-
-						</td>
-					</ng-container>
-				</ng-container>
-			</tr>
-		</table>
-		</div>
-		</div>
-	`,
+	templateUrl: decodeURI(require.toUrl('./dashboardGridContainer.component.html')),
 	providers: [{ provide: TabChild, useExisting: forwardRef(() => DashboardGridContainer) }]
 })
 export class DashboardGridContainer extends DashboardTab implements OnDestroy {
@@ -83,6 +54,7 @@ export class DashboardGridContainer extends DashboardTab implements OnDestroy {
 	public readonly onResize: Event<void> = this._onResize.event;
 	private cellWidth: number = 270;
 	private cellHeight: number = 270;
+	private ScrollbarVisibility = ScrollbarVisibility;
 
 	protected SKELETON_WIDTH = 5;
 
@@ -206,7 +178,7 @@ export class DashboardGridContainer extends DashboardTab implements OnDestroy {
 
 	@ViewChildren(DashboardWidgetWrapper) private _widgets: QueryList<DashboardWidgetWrapper>;
 	@ViewChildren(WebviewContent) private _webViews: QueryList<WebviewContent>;
-	@ViewChild(ScrollableDirective) private _scrollable: ScrollableDirective;
+	@ContentChild(ScrollableDirective) private _scrollable: ScrollableDirective;
 	constructor(
 		@Inject(forwardRef(() => CommonServiceInterface)) protected dashboardService: CommonServiceInterface,
 		@Inject(forwardRef(() => ElementRef)) protected _el: ElementRef,
@@ -220,7 +192,7 @@ export class DashboardGridContainer extends DashboardTab implements OnDestroy {
 
 	ngOnInit() {
 		if (this.tab.container) {
-			this._contents = values(this.tab.container)[0];
+			this._contents = Object.values(this.tab.container)[0];
 			this._contents.forEach(widget => {
 				if (!widget.row) {
 					widget.row = 0;
@@ -235,16 +207,14 @@ export class DashboardGridContainer extends DashboardTab implements OnDestroy {
 					widget.rowspan = '1';
 				}
 			});
-			if (this._contents.length > 0) {
-				this.rows = this.createIndexes(this._contents.map(w => w.row));
-				this.cols = this.createIndexes(this._contents.map(w => w.col));
-			}
+			this.rows = this.createIndexes(this._contents.map(w => w.row));
+			this.cols = this.createIndexes(this._contents.map(w => w.col));
 		}
 	}
 
 	private createIndexes(indexes: number[]) {
 		const max = Math.max(...indexes) + 1;
-		return new Array(max).fill(0).map((x, i) => i);
+		return Array(max).fill(0).map((x, i) => i);
 	}
 
 	ngOnDestroy() {

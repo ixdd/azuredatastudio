@@ -4,10 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 import 'vs/css!./code';
 
-import { OnInit, Component, Input, ElementRef, ViewChild, SimpleChange, OnChanges } from '@angular/core';
+import { OnInit, Component, Input, Inject, forwardRef, ElementRef, ChangeDetectorRef, ViewChild, SimpleChange, OnChanges } from '@angular/core';
 import { CellView } from 'sql/workbench/contrib/notebook/browser/cellViews/interfaces';
-import { ICellModel } from 'sql/workbench/services/notebook/browser/models/modelInterfaces';
-import { localize } from 'vs/nls';
+import { ICellModel } from 'sql/workbench/contrib/notebook/browser/models/modelInterfaces';
 
 export const COLLAPSE_SELECTOR: string = 'collapse-component';
 
@@ -18,17 +17,14 @@ export const COLLAPSE_SELECTOR: string = 'collapse-component';
 
 export class CollapseComponent extends CellView implements OnInit, OnChanges {
 	@ViewChild('collapseCellButton', { read: ElementRef }) private collapseCellButtonElement: ElementRef;
-
-	private readonly expandButtonTitle = localize('expandCellContents', "Expand code cell contents");
-	private readonly expandButtonClass = 'arrow-down';
-
-	private readonly collapseButtonTitle = localize('collapseCellContents', "Collapse code cell contents");
-	private readonly collapseButtonClass = 'arrow-up';
+	@ViewChild('expandCellButton', { read: ElementRef }) private expandCellButtonElement: ElementRef;
 
 	@Input() cellModel: ICellModel;
 	@Input() activeCellId: string;
 
-	constructor() {
+	constructor(
+		@Inject(forwardRef(() => ChangeDetectorRef)) private _changeRef: ChangeDetectorRef,
+	) {
 		super();
 	}
 
@@ -50,14 +46,13 @@ export class CollapseComponent extends CellView implements OnInit, OnChanges {
 
 	private handleCellCollapse(isCollapsed: boolean): void {
 		let collapseButton = <HTMLElement>this.collapseCellButtonElement.nativeElement;
+		let expandButton = <HTMLElement>this.expandCellButtonElement.nativeElement;
 		if (isCollapsed) {
-			collapseButton.classList.remove(this.collapseButtonClass);
-			collapseButton.classList.add(this.expandButtonClass);
-			collapseButton.title = this.expandButtonTitle;
+			collapseButton.style.display = 'none';
+			expandButton.style.display = 'block';
 		} else {
-			collapseButton.classList.remove(this.expandButtonClass);
-			collapseButton.classList.add(this.collapseButtonClass);
-			collapseButton.title = this.collapseButtonTitle;
+			collapseButton.style.display = 'block';
+			expandButton.style.display = 'none';
 		}
 	}
 
@@ -68,22 +63,17 @@ export class CollapseComponent extends CellView implements OnInit, OnChanges {
 		this.cellModel.isCollapsed = !this.cellModel.isCollapsed;
 	}
 
-	public cellGuid(): string {
-		return this.cellModel.cellGuid;
-	}
-
 	public layout() {
 
 	}
 
 	public toggleIconVisibility(isActiveOrHovered: boolean) {
 		let collapseButton = <HTMLElement>this.collapseCellButtonElement.nativeElement;
-		if (collapseButton.title === this.collapseButtonTitle) {
-			if (isActiveOrHovered) {
-				collapseButton.classList.add(this.collapseButtonClass);
-			} else {
-				collapseButton.classList.remove(this.collapseButtonClass);
-			}
+		let buttonClass = 'icon-hide-cell';
+		if (isActiveOrHovered) {
+			collapseButton.classList.add(buttonClass);
+		} else {
+			collapseButton.classList.remove(buttonClass);
 		}
 	}
 }

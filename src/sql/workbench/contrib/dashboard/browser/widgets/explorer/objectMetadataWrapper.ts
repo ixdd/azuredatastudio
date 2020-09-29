@@ -13,16 +13,14 @@ export class ObjectMetadataWrapper implements ObjectMetadata {
 	public name: string;
 	public schema: string;
 
-	public get fullName(): string {
-		return `${this.schema}.${this.name}`;
-	}
-
-	constructor(from: ObjectMetadata) {
-		this.metadataType = from.metadataType;
-		this.metadataTypeName = from.metadataTypeName;
-		this.urn = from.urn;
-		this.name = from.name;
-		this.schema = from.schema;
+	constructor(from?: ObjectMetadata) {
+		if (from) {
+			this.metadataType = from.metadataType;
+			this.metadataTypeName = from.metadataTypeName;
+			this.urn = from.urn;
+			this.name = from.name;
+			this.schema = from.schema;
+		}
 	}
 
 	public matches(other: ObjectMetadataWrapper): boolean {
@@ -33,6 +31,14 @@ export class ObjectMetadataWrapper implements ObjectMetadata {
 		return this.metadataType === other.metadataType
 			&& this.schema === other.schema
 			&& this.name === other.name;
+	}
+
+	public static createFromObjectMetadata(objectMetadata: ObjectMetadata[]): ObjectMetadataWrapper[] {
+		if (!objectMetadata) {
+			return undefined;
+		}
+
+		return objectMetadata.map(m => new ObjectMetadataWrapper(m));
 	}
 
 	// custom sort : Table > View > Stored Procedures > Function

@@ -5,14 +5,15 @@
 
 import 'vs/css!./controlHostContent';
 
-import { Component, forwardRef, Input, Inject, ChangeDetectorRef, ViewChild } from '@angular/core';
+import { Component, forwardRef, Input, OnInit, Inject, ChangeDetectorRef, ElementRef, ViewChild } from '@angular/core';
 
 import { Event, Emitter } from 'vs/base/common/event';
+import { IDisposable } from 'vs/base/common/lifecycle';
 import { CommonServiceInterface } from 'sql/workbench/services/bootstrap/browser/commonServiceInterface.service';
 
 import * as azdata from 'azdata';
 import { memoize } from 'vs/base/common/decorators';
-import { AgentViewComponent } from 'sql/workbench/contrib/jobManagement/browser/agentView.component';
+import { AgentViewComponent } from '../../../jobManagement/browser/agentView.component';
 
 @Component({
 	templateUrl: decodeURI(require.toUrl('./controlHostContent.component.html')),
@@ -26,6 +27,7 @@ export class ControlHostContent {
 	private _onMessage = new Emitter<string>();
 	public readonly onMessage: Event<string> = this._onMessage.event;
 
+	private _onMessageDisposable: IDisposable;
 	private _type: string;
 
 	/* Children components */
@@ -33,12 +35,13 @@ export class ControlHostContent {
 
 	constructor(
 		@Inject(forwardRef(() => CommonServiceInterface)) private _dashboardService: CommonServiceInterface,
-		@Inject(forwardRef(() => ChangeDetectorRef)) private _changeRef: ChangeDetectorRef
+		@Inject(forwardRef(() => ChangeDetectorRef)) private _changeRef: ChangeDetectorRef,
+		@Inject(forwardRef(() => ElementRef)) private _el: ElementRef
 	) {
 	}
 
 	public layout(): void {
-		this._agentViewComponent?.layout();
+		this._agentViewComponent.layout();
 	}
 
 	public get id(): string {
@@ -71,8 +74,6 @@ export class ControlHostContent {
 	}
 
 	public refresh() {
-		if (this._agentViewComponent !== undefined) {
-			this._agentViewComponent.refresh = true;
-		}
+		this._agentViewComponent.refresh = true;
 	}
 }

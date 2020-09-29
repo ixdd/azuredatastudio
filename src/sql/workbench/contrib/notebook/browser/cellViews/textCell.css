@@ -6,47 +6,15 @@
 text-cell-component {
 	display: block;
 }
-text-cell-component .notebook-text {
-	display: flex;
-	outline: none;
-}
-text-cell-component code-component {
-	flex-direction: column;
-}
+
 text-cell-component .notebook-preview {
-	flex-direction: column;
+	user-select: none;
 	padding-left: 8px;
 	padding-right: 8px;
-	user-select: none;
-	width: 100%;
-	outline: none;
 }
-text-cell-component .show-markdown.show-preview code-component {
-	width: 50%
-}
-text-cell-component .show-markdown .notebook-preview {
-	border-color: transparent;
-	border-left-width: 1px;
-	border-style: solid;
-	border-top-width: 0;
-	width: 50%
-}
+
 .notebook-preview.actionselect {
 	user-select: text;
-}
-text-cell-component .monaco-editor .margin,
-text-cell-component code-component .monaco-editor,
-text-cell-component code-component .monaco-editor-background,
-text-cell-component code-component .monaco-editor .inputarea.ime-input {
-	background-color: transparent;
-}
-
-.vs .notebook-preview .rangeHighlight {
-	background-color: rgba(255, 255, 0, 0.2)
-}
-
-.vs-dark .notebook-preview .rangeHighlight {
-	background-color: rgba(255, 255, 0, 0.2)
 }
 
 text-cell-component table {

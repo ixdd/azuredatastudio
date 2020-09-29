@@ -15,13 +15,13 @@ import { IContextViewProvider } from 'vs/base/browser/ui/contextview/contextview
 import { FindInput, IFindInputStyles } from 'vs/base/browser/ui/findinput/findInput';
 import { IMessage as InputBoxMessage } from 'vs/base/browser/ui/inputbox/inputBox';
 import { Widget } from 'vs/base/browser/ui/widget';
-import { Sash, ISashEvent, Orientation, IVerticalSashLayoutProvider } from 'vs/base/browser/ui/sash/sash';
+import { Sash, IHorizontalSashLayoutProvider, ISashEvent, Orientation } from 'vs/base/browser/ui/sash/sash';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IOverlayWidget, IOverlayWidgetPosition, OverlayWidgetPositionPreference } from 'vs/editor/browser/editorBrowser';
 import { FIND_IDS, CONTEXT_FIND_INPUT_FOCUSED } from 'vs/editor/contrib/find/findModel';
 import { FindReplaceState, FindReplaceStateChangedEvent } from 'vs/editor/contrib/find/findState';
 import { IContextKeyService, IContextKey } from 'vs/platform/contextkey/common/contextkey';
-import { IColorTheme, IThemeService } from 'vs/platform/theme/common/themeService';
+import { ITheme, IThemeService } from 'vs/platform/theme/common/themeService';
 import * as colors from 'vs/platform/theme/common/colorRegistry';
 import { IEditorAction } from 'vs/editor/common/editorCommon';
 import { IDisposable } from 'vs/base/common/lifecycle';
@@ -61,7 +61,7 @@ export interface IConfigurationChangedEvent {
 	layoutInfo?: boolean;
 }
 
-export class FindWidget extends Widget implements IOverlayWidget, IVerticalSashLayoutProvider {
+export class FindWidget extends Widget implements IOverlayWidget, IHorizontalSashLayoutProvider {
 	private static ID = 'editor.contrib.findWidget';
 	private _tableController: ITableController;
 	private _state: FindReplaceState;
@@ -156,8 +156,8 @@ export class FindWidget extends Widget implements IOverlayWidget, IVerticalSashL
 
 		this._tableController.addOverlayWidget(this);
 
-		this._applyTheme(themeService.getColorTheme());
-		this._register(themeService.onDidColorThemeChange(this._applyTheme.bind(this)));
+		this._applyTheme(themeService.getTheme());
+		this._register(themeService.onThemeChange(this._applyTheme.bind(this)));
 	}
 
 	// ----- IOverlayWidget API
@@ -288,7 +288,7 @@ export class FindWidget extends Widget implements IOverlayWidget, IVerticalSashL
 		}
 	}
 
-	private _applyTheme(theme: IColorTheme) {
+	private _applyTheme(theme: ITheme) {
 		let inputStyles: IFindInputStyles = {
 			inputActiveOptionBorder: theme.getColor(colors.inputActiveOptionBorder),
 			inputBackground: theme.getColor(colors.inputBackground),
@@ -330,7 +330,7 @@ export class FindWidget extends Widget implements IOverlayWidget, IVerticalSashL
 		}
 
 		if (e.equals(KeyMod.Shift | KeyCode.Enter)) {
-			this._tableController.getAction(ACTION_IDS.FIND_PREVIOUS).run().then(null, onUnexpectedError);
+			this._tableController.getAction(ACTION_IDS.FIND_NEXT).run().then(null, onUnexpectedError);
 			e.preventDefault();
 			return;
 		}
@@ -349,8 +349,14 @@ export class FindWidget extends Widget implements IOverlayWidget, IVerticalSashL
 	}
 
 	// ----- sash
-	public getVerticalSashLeft(sash: Sash): number {
+	public getHorizontalSashTop(sash: Sash): number {
 		return 0;
+	}
+	public getHorizontalSashLeft?(sash: Sash): number {
+		return 0;
+	}
+	public getHorizontalSashWidth?(sash: Sash): number {
+		return 500;
 	}
 
 	// ----- initialization
@@ -421,7 +427,7 @@ export class FindWidget extends Widget implements IOverlayWidget, IVerticalSashL
 		// Previous button
 		this._prevBtn = this._register(new SimpleButton({
 			label: NLS_PREVIOUS_MATCH_BTN_LABEL + this._keybindingLabelFor(FIND_IDS.PreviousMatchFindAction),
-			className: 'codicon codicon-arrow-up',
+			className: 'previous',
 			onTrigger: () => {
 				this._tableController.getAction(ACTION_IDS.FIND_PREVIOUS).run().then(null, onUnexpectedError);
 			},
@@ -431,7 +437,7 @@ export class FindWidget extends Widget implements IOverlayWidget, IVerticalSashL
 		// Next button
 		this._nextBtn = this._register(new SimpleButton({
 			label: NLS_NEXT_MATCH_BTN_LABEL + this._keybindingLabelFor(FIND_IDS.NextMatchFindAction),
-			className: 'codicon codicon-arrow-down',
+			className: 'next',
 			onTrigger: () => {
 				this._tableController.getAction(ACTION_IDS.FIND_NEXT).run().then(null, onUnexpectedError);
 			},
@@ -441,24 +447,21 @@ export class FindWidget extends Widget implements IOverlayWidget, IVerticalSashL
 		let findPart = document.createElement('div');
 		findPart.className = 'find-part';
 		findPart.appendChild(this._findInput.domNode);
-		let actionsContainer = document.createElement('div');
-		findPart.appendChild(actionsContainer);
-		actionsContainer.className = 'find-actions';
-		actionsContainer.appendChild(this._matchesCount);
-		actionsContainer.appendChild(this._prevBtn.domNode);
-		actionsContainer.appendChild(this._nextBtn.domNode);
+		findPart.appendChild(this._matchesCount);
+		findPart.appendChild(this._prevBtn.domNode);
+		findPart.appendChild(this._nextBtn.domNode);
 
 		// Close button
 		this._closeBtn = this._register(new SimpleButton({
 			label: NLS_CLOSE_BTN_LABEL + this._keybindingLabelFor(FIND_IDS.CloseFindWidgetCommand),
-			className: 'codicon codicon-close',
+			className: 'close-fw',
 			onTrigger: () => {
 				this._state.change({ isRevealed: false, searchScope: null }, false);
 			},
 			onKeyDown: () => { }
 		}));
 
-		actionsContainer.appendChild(this._closeBtn.domNode);
+		findPart.appendChild(this._closeBtn.domNode);
 
 		return findPart;
 	}
@@ -499,6 +502,87 @@ export class FindWidget extends Widget implements IOverlayWidget, IVerticalSashL
 			}
 			this._domNode.style.width = `${width}px`;
 		}));
+	}
+}
+
+interface ISimpleCheckboxOpts {
+	parent: HTMLElement;
+	title: string;
+	onChange: () => void;
+}
+
+class SimpleCheckbox extends Widget {
+
+	private static _COUNTER = 0;
+
+	private _opts: ISimpleCheckboxOpts;
+	private _domNode: HTMLElement;
+	private _checkbox: HTMLInputElement;
+	private _label: HTMLLabelElement;
+
+	constructor(opts: ISimpleCheckboxOpts) {
+		super();
+		this._opts = opts;
+
+		this._domNode = document.createElement('div');
+		this._domNode.className = 'monaco-checkbox';
+		this._domNode.title = this._opts.title;
+		this._domNode.tabIndex = 0;
+
+		this._checkbox = document.createElement('input');
+		this._checkbox.type = 'checkbox';
+		this._checkbox.className = 'checkbox';
+		this._checkbox.id = 'checkbox-' + SimpleCheckbox._COUNTER++;
+		this._checkbox.tabIndex = -1;
+
+		this._label = document.createElement('label');
+		this._label.className = 'label';
+		// Connect the label and the checkbox. Checkbox will get checked when the label recieves a click.
+		this._label.htmlFor = this._checkbox.id;
+		this._label.tabIndex = -1;
+
+		this._domNode.appendChild(this._checkbox);
+		this._domNode.appendChild(this._label);
+
+		this._opts.parent.appendChild(this._domNode);
+
+		this.onchange(this._checkbox, (e) => {
+			this._opts.onChange();
+		});
+	}
+
+	public get domNode(): HTMLElement {
+		return this._domNode;
+	}
+
+	public get checked(): boolean {
+		return this._checkbox.checked;
+	}
+
+	public set checked(newValue: boolean) {
+		this._checkbox.checked = newValue;
+	}
+
+	public focus(): void {
+		this._checkbox.focus();
+	}
+
+	private enable(): void {
+		this._checkbox.removeAttribute('disabled');
+	}
+
+	private disable(): void {
+		this._checkbox.disabled = true;
+	}
+
+	public setEnabled(enabled: boolean): void {
+		if (enabled) {
+			this.enable();
+			this.domNode.tabIndex = 0;
+		} else {
+			this.disable();
+			this.domNode.tabIndex = -1;
+		}
 	}
 }
 

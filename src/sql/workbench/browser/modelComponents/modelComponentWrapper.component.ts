@@ -8,6 +8,10 @@ import {
 	ElementRef, OnInit, ChangeDetectorRef, ReflectiveInjector, Injector, ComponentRef
 } from '@angular/core';
 
+<<<<<<< HEAD
+=======
+import { ComponentHostDirective } from 'sql/workbench/contrib/dashboard/browser/core/componentHost.directive';
+>>>>>>> origin/workbenchlinting
 import { AngularDisposable } from 'sql/base/browser/lifecycle';
 import { IComponentConfig, COMPONENT_CONFIG } from './interfaces';
 import { Extensions, IComponentRegistry } from 'sql/platform/dashboard/browser/modelComponentRegistry';
@@ -19,11 +23,17 @@ import { memoize } from 'vs/base/common/decorators';
 import { generateUuid } from 'vs/base/common/uuid';
 import { Event } from 'vs/base/common/event';
 import { LayoutRequestParams } from 'sql/workbench/services/dialog/browser/dialogContainer.component';
+<<<<<<< HEAD
 import { IThemeService, IColorTheme } from 'vs/platform/theme/common/themeService';
 import { ILogService } from 'vs/platform/log/common/log';
 import { IBootstrapParams } from 'sql/workbench/services/bootstrap/common/bootstrapParams';
 import { IComponentDescriptor, IModelStore, IComponent } from 'sql/platform/dashboard/browser/interfaces';
 import { ComponentHostDirective } from 'sql/base/browser/componentHost.directive';
+=======
+import { IThemeService, ITheme } from 'vs/platform/theme/common/themeService';
+import { ILogService } from 'vs/platform/log/common/log';
+import { IBootstrapParams } from 'sql/workbench/services/bootstrap/common/bootstrapParams';
+>>>>>>> origin/workbenchlinting
 
 const componentRegistry = <IComponentRegistry>Registry.as(Extensions.ComponentContribution);
 

@@ -8,6 +8,7 @@ import * as azdata from 'azdata';
 import { Event } from 'vs/base/common/event';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import { URI } from 'vs/base/common/uri';
+<<<<<<< HEAD
 import { RenderMimeRegistry } from 'sql/workbench/services/notebook/browser/outputs/registry';
 import { ModelFactory } from 'sql/workbench/services/notebook/browser/models/modelFactory';
 import { IConnectionProfile } from 'sql/platform/connection/common/interfaces';
@@ -20,6 +21,18 @@ import { Range } from 'vs/editor/common/core/range';
 import { IStandardKernelWithProvider } from 'sql/workbench/services/notebook/browser/models/notebookUtils';
 
 export const SERVICE_ID = 'sqlNotebookService';
+=======
+import { RenderMimeRegistry } from 'sql/workbench/contrib/notebook/browser/outputs/registry';
+import { ModelFactory } from 'sql/workbench/contrib/notebook/browser/models/modelFactory';
+import { IConnectionProfile } from 'sql/platform/connection/common/interfaces';
+import { NotebookInput } from 'sql/workbench/contrib/notebook/browser/models/notebookInput';
+import { ISingleNotebookEditOperation } from 'sql/workbench/api/common/sqlExtHostTypes';
+import { ICellModel, INotebookModel } from 'sql/workbench/contrib/notebook/browser/models/modelInterfaces';
+import { NotebookChangeType } from 'sql/workbench/contrib/notebook/common/models/contracts';
+import { IBootstrapParams } from 'sql/workbench/services/bootstrap/common/bootstrapParams';
+
+export const SERVICE_ID = 'notebookService';
+>>>>>>> origin/workbenchlinting
 export const INotebookService = createDecorator<INotebookService>(SERVICE_ID);
 
 export const DEFAULT_NOTEBOOK_PROVIDER = 'builtin';

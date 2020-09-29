@@ -9,7 +9,8 @@ import * as nls from 'vs/nls';
 import { Component, Inject, forwardRef, ChangeDetectorRef, ViewChild, Injectable } from '@angular/core';
 import { AgentJobInfo, AgentNotebookInfo } from 'azdata';
 import { PanelComponent, IPanelOptions, NavigationBarLayout } from 'sql/base/browser/ui/panel/panel.component';
-import { IJobManagementService } from 'sql/workbench/services/jobManagement/common/interfaces';
+import { IJobManagementService } from 'sql/platform/jobManagement/common/interfaces';
+import { IDashboardService } from 'sql/platform/dashboard/browser/dashboardService';
 
 
 export const DASHBOARD_SELECTOR: string = 'agentview-component';
@@ -39,21 +40,23 @@ export class AgentViewComponent {
 	public proxiesIconClass: string = 'proxiesview-icon';
 	public operatorsIconClass: string = 'operatorsview-icon';
 
-	public readonly jobsComponentTitle: string = nls.localize('jobview.Jobs', "Jobs");
-	public readonly notebooksComponentTitle: string = nls.localize('jobview.Notebooks', "Notebooks");
-	public readonly alertsComponentTitle: string = nls.localize('jobview.Alerts', "Alerts");
-	public readonly proxiesComponentTitle: string = nls.localize('jobview.Proxies', "Proxies");
-	public readonly operatorsComponentTitle: string = nls.localize('jobview.Operators', "Operators");
+	private readonly jobsComponentTitle: string = nls.localize('jobview.Jobs', "Jobs");
+	private readonly notebooksComponentTitle: string = nls.localize('jobview.Notebooks', "Notebooks");
+	private readonly alertsComponentTitle: string = nls.localize('jobview.Alerts', "Alerts");
+	private readonly proxiesComponentTitle: string = nls.localize('jobview.Proxies', "Proxies");
+	private readonly operatorsComponentTitle: string = nls.localize('jobview.Operators', "Operators");
 
-	public readonly panelOpt: IPanelOptions = {
-		alwaysShowTabs: true,
-		layout: NavigationBarLayout.horizontal,
+	// tslint:disable-next-line:no-unused-variable
+	private readonly panelOpt: IPanelOptions = {
+		showTabsWhenOne: true,
+		layout: NavigationBarLayout.vertical,
 		showIcon: true
 	};
 
 	constructor(
 		@Inject(forwardRef(() => ChangeDetectorRef)) private _cd: ChangeDetectorRef,
-		@Inject(IJobManagementService) jobManagementService: IJobManagementService) {
+		@Inject(IJobManagementService) jobManagementService: IJobManagementService,
+		@Inject(IDashboardService) dashboardService: IDashboardService, ) {
 		this._expanded = new Map<string, string>();
 
 		let self = this;

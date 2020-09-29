@@ -12,9 +12,13 @@ import {
 import { FormLayout, FormItemLayout } from 'azdata';
 
 import { ContainerBase } from 'sql/workbench/browser/modelComponents/componentBase';
+<<<<<<< HEAD
 import { find } from 'vs/base/common/arrays';
 import { IComponentDescriptor, IComponent, IModelStore } from 'sql/platform/dashboard/browser/interfaces';
 import { convertSize } from 'sql/base/browser/dom';
+=======
+import { CommonServiceInterface } from 'sql/workbench/services/bootstrap/browser/commonServiceInterface.service';
+>>>>>>> origin/workbenchlinting
 
 export interface TitledFormItemLayout {
 	title: string;

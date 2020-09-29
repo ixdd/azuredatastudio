@@ -13,11 +13,11 @@ import { TabChild } from 'sql/base/browser/ui/panel/tab.component';
 import { Table } from 'sql/base/browser/ui/table/table';
 import { AgentViewComponent } from 'sql/workbench/contrib/jobManagement/browser/agentView.component';
 import { RowDetailView } from 'sql/base/browser/ui/table/plugins/rowDetailView';
-import { JobCacheObject } from 'sql/workbench/services/jobManagement/common/jobManagementService';
-import { EditJobAction, DeleteJobAction, NewJobAction, RunJobAction } from 'sql/workbench/contrib/jobManagement/browser/jobActions';
-import { JobManagementUtilities } from 'sql/workbench/services/jobManagement/browser/jobManagementUtilities';
+import { JobCacheObject } from 'sql/platform/jobManagement/common/jobManagementService';
+import { EditJobAction, DeleteJobAction, NewJobAction, RunJobAction } from 'sql/platform/jobManagement/browser/jobActions';
+import { JobManagementUtilities } from 'sql/platform/jobManagement/browser/jobManagementUtilities';
 import { HeaderFilter } from 'sql/base/browser/ui/table/plugins/headerFilter.plugin';
-import { IJobManagementService } from 'sql/workbench/services/jobManagement/common/interfaces';
+import { IJobManagementService } from 'sql/platform/jobManagement/common/interfaces';
 import { JobManagementView, JobActionContext } from 'sql/workbench/contrib/jobManagement/browser/jobManagementView';
 import { CommonServiceInterface } from 'sql/workbench/services/bootstrap/browser/commonServiceInterface.service';
 import { ICommandService } from 'vs/platform/commands/common/commands';
@@ -27,14 +27,11 @@ import { IAction } from 'vs/base/common/actions';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IDashboardService } from 'sql/platform/dashboard/browser/dashboardService';
 import { escape } from 'sql/base/common/strings';
-import { IWorkbenchThemeService } from 'vs/workbench/services/themes/common/workbenchThemeService';
+import { IWorkbenchThemeService, IColorTheme } from 'vs/workbench/services/themes/common/workbenchThemeService';
 import { tableBackground, cellBackground, cellBorderColor } from 'sql/platform/theme/common/colors';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import * as TelemetryKeys from 'sql/platform/telemetry/common/telemetryKeys';
 import { attachButtonStyler } from 'sql/platform/theme/common/styler';
-import { find } from 'vs/base/common/arrays';
-import { IColorTheme } from 'vs/platform/theme/common/themeService';
-import { onUnexpectedError } from 'vs/base/common/errors';
 
 export const JOBSVIEW_SELECTOR: string = 'jobsview-component';
 export const ROW_HEIGHT: number = 45;
@@ -82,7 +79,7 @@ export class JobsViewComponent extends JobManagementView implements OnInit, OnDe
 	private rowDetail: RowDetailView<IItem>;
 	private filterPlugin: any;
 	private dataView: any;
-	public _isCloud: boolean;
+	private _isCloud: boolean;
 	private filterStylingMap: { [columnName: string]: [any]; } = {};
 	private filterStack = ['start'];
 	private filterValueMap: { [columnName: string]: string[]; } = {};
@@ -100,6 +97,7 @@ export class JobsViewComponent extends JobManagementView implements OnInit, OnDe
 	constructor(
 		@Inject(forwardRef(() => CommonServiceInterface)) commonService: CommonServiceInterface,
 		@Inject(forwardRef(() => ChangeDetectorRef)) private _cd: ChangeDetectorRef,
+		@Inject(forwardRef(() => ElementRef)) private _el: ElementRef,
 		@Inject(forwardRef(() => AgentViewComponent)) _agentViewComponent: AgentViewComponent,
 		@Inject(IJobManagementService) private _jobManagementService: IJobManagementService,
 		@Inject(IWorkbenchThemeService) private _themeService: IWorkbenchThemeService,
@@ -311,7 +309,7 @@ export class JobsViewComponent extends JobManagementView implements OnInit, OnDe
 						this._table.grid.removeCellCssStyles('error-row' + i.toString());
 						let item = this.dataView.getItemByIdx(i);
 						// current filter
-						if (find(filterValues, x => x === item[args.column.field])) {
+						if (_.contains(filterValues, item[args.column.field])) {
 							// check all previous filters
 							if (this.checkPreviousFilters(item)) {
 								if (item.lastRunOutcome === 'Failed') {
@@ -391,7 +389,7 @@ export class JobsViewComponent extends JobManagementView implements OnInit, OnDe
 		// cache the dataview for future use
 		this._jobCacheObject.dataView = this.dataView;
 		this.filterValueMap['start'] = [[], this.dataView.getItems()];
-		this.loadJobHistories().catch(onUnexpectedError);
+		this.loadJobHistories();
 	}
 
 	private highlightErrorRows(e) {
@@ -543,7 +541,7 @@ export class JobsViewComponent extends JobManagementView implements OnInit, OnDe
 			// so they can be expanded quicker
 			let failing = separatedJobs[0];
 			let passing = separatedJobs[1];
-			await Promise.all([this.curateJobHistory(failing, ownerUri), this.curateJobHistory(passing, ownerUri)]);
+			Promise.all([this.curateJobHistory(failing, ownerUri), this.curateJobHistory(passing, ownerUri)]);
 		}
 	}
 
@@ -563,7 +561,7 @@ export class JobsViewComponent extends JobManagementView implements OnInit, OnDe
 	private checkPreviousFilters(item): boolean {
 		for (let column in this.filterValueMap) {
 			if (column !== 'start' && this.filterValueMap[column][0].length > 0) {
-				if (!find(this.filterValueMap[column][0], x => x === item[JobManagementUtilities.convertColNameToField(column)])) {
+				if (!_.contains(this.filterValueMap[column][0], item[JobManagementUtilities.convertColNameToField(column)])) {
 					return false;
 				}
 			}
@@ -672,7 +670,7 @@ export class JobsViewComponent extends JobManagementView implements OnInit, OnDe
 		// if the durations are all 0 secs, show minimal chart
 		// instead of nothing
 		if (zeroDurationJobCount === jobHistories.length) {
-			return new Array(jobHistories.length).fill('5px');
+			return Array(jobHistories.length).fill('5px');
 		} else {
 			return chartHeights;
 		}
@@ -705,9 +703,9 @@ export class JobsViewComponent extends JobManagementView implements OnInit, OnDe
 			let filterValues = col.filterValues;
 			if (filterValues && filterValues.length > 0) {
 				if (item._parent) {
-					value = value && find(filterValues, x => x === item._parent[col.field]);
+					value = value && _.contains(filterValues, item._parent[col.field]);
 				} else {
-					value = value && find(filterValues, x => x === item[col.field]);
+					value = value && _.contains(filterValues, item[col.field]);
 				}
 			}
 		}

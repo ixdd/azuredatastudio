@@ -2,9 +2,10 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the Source EULA. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { generateDashboardTabSchema, generateDashboardWidgetSchema } from 'sql/workbench/contrib/dashboard/browser/pages/dashboardPageContribution';
+
 import { IJSONSchema } from 'vs/base/common/jsonSchema';
 import * as nls from 'vs/nls';
+import { generateDashboardWidgetSchema, generateDashboardTabSchema } from 'sql/workbench/contrib/dashboard/browser/pages/dashboardPageContribution';
 
 export interface IPropertiesConfig {
 	edition: number | Array<number>;
@@ -77,11 +78,21 @@ const defaultVal = [
 	{
 		name: 'Tasks',
 		widget: {
-			'tasks-widget': ['newQuery', 'mssqlCluster.task.newNotebook', { name: 'restore', when: 'connectionProvider == \'MSSQL\' && !mssql:iscloud && mssql:engineedition != 11' }]
+			'tasks-widget': [{ name: 'restore', when: '!mssql:iscloud && mssql:engineedition != 11' }, 'configureDashboard', 'newQuery', 'mssqlCluster.task.newNotebook']
 		},
 		gridItemConfig: {
 			sizex: 1,
 			sizey: 1
+		}
+	},
+	{
+		name: 'Search',
+		gridItemConfig: {
+			sizex: 1,
+			sizey: 2
+		},
+		widget: {
+			'explorer-widget': {}
 		}
 	},
 	{
@@ -92,16 +103,6 @@ const defaultVal = [
 	{
 		widget: {
 			'all-database-size-server-insight': null
-		}
-	}, {
-		name: nls.localize('explorerWidgetsTitle', "Search"),
-		gridItemConfig: {
-			sizex: 2,
-			sizey: 2
-		},
-		when: 'connectionProvider != \'MSSQL\' || mssql:engineedition == 11 || mssql:iscloud',
-		widget: {
-			'explorer-widget': {}
 		}
 	}
 ];

@@ -22,10 +22,14 @@ export const clientCapabilities = {
 
 export interface ConnectionProviderProperties {
 	providerId: string;
+<<<<<<< HEAD
 	iconPath?: URI | IconPath | { id: string, path: IconPath, default?: boolean }[]
 	displayName: string;
 	notebookKernelAlias?: string;
 	azureResource?: string;
+=======
+	displayName: string;
+>>>>>>> origin/workbenchlinting
 	connectionOptions: azdata.ConnectionOption[];
 }
 

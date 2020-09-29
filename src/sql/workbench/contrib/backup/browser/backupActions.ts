@@ -13,8 +13,8 @@ import { IObjectExplorerService } from 'sql/workbench/services/objectExplorer/br
 import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { getCurrentGlobalConnection } from 'sql/workbench/browser/taskUtilities';
 import { mssqlProviderName } from 'sql/platform/connection/common/constants';
-import { IBackupUiService } from 'sql/workbench/contrib/backup/common/backupUiService';
-import { Task } from 'sql/workbench/services/tasks/browser/tasksRegistry';
+import { IBackupUiService } from 'sql/workbench/services/backup/common/backupUiService';
+import { Task } from 'sql/platform/tasks/browser/tasksRegistry';
 import { ICapabilitiesService } from 'sql/platform/capabilities/common/capabilitiesService';
 import { ConnectionProfile } from 'sql/platform/connection/common/connectionProfile';
 
@@ -39,9 +39,9 @@ export class BackupAction extends Task {
 		});
 	}
 
-	runTask(accessor: ServicesAccessor, profile?: IConnectionProfile): void | Promise<void> {
+	runTask(accessor: ServicesAccessor, profile: IConnectionProfile): void | Promise<void> {
 		const configurationService = accessor.get<IConfigurationService>(IConfigurationService);
-		const previewFeaturesEnabled = configurationService.getValue<{ enablePreviewFeatures: boolean }>('workbench').enablePreviewFeatures;
+		const previewFeaturesEnabled: boolean = configurationService.getValue('workbench')['enablePreviewFeatures'];
 		if (!previewFeaturesEnabled) {
 			return accessor.get<INotificationService>(INotificationService).info(localize('backup.isPreviewFeature', "You must enable preview features in order to use backup"));
 		}

@@ -12,14 +12,21 @@ import { fixupConnectionCredentials } from 'sql/platform/connection/common/conne
 import { IConnectionProfile, ConnectionOptionSpecialType, ServiceOptionType } from 'sql/platform/connection/common/interfaces';
 import { TestConfigurationService } from 'sql/platform/connection/test/common/testConfigurationService';
 import { TestCredentialsService } from 'sql/platform/credentials/test/common/testCredentialsService';
+<<<<<<< HEAD
+=======
+import { ConnectionOptionSpecialType, ServiceOptionType } from 'sql/workbench/api/common/sqlExtHostTypes';
+>>>>>>> origin/workbenchlinting
 import { TestCapabilitiesService } from 'sql/platform/capabilities/test/common/testCapabilitiesService';
 import { deepClone, deepFreeze, assign } from 'vs/base/common/objects';
 import { ConfigurationTarget } from 'vs/platform/configuration/common/configuration';
 import { mssqlProviderName } from 'sql/platform/connection/common/constants';
 import { ConnectionProviderProperties } from 'sql/platform/capabilities/common/capabilitiesService';
 import { InMemoryStorageService } from 'vs/platform/storage/common/storage';
+<<<<<<< HEAD
 import { find } from 'vs/base/common/arrays';
 import { generateUuid } from 'vs/base/common/uuid';
+=======
+>>>>>>> origin/workbenchlinting
 
 suite('ConnectionStore', () => {
 	let defaultNamedProfile: IConnectionProfile = deepFreeze({

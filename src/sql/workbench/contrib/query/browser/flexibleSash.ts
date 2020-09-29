@@ -22,7 +22,7 @@ export interface IFlexibleSash {
 	getSplitPoint(): number;
 
 	// Sets the Dimension containing the height and width of the editor this sash will separate
-	setDimension(dimension: Dimension);
+	setDimenesion(dimension: Dimension);
 
 	// Re-calculates the width and height of the sash
 	layout(): void;
@@ -95,10 +95,10 @@ export class HorizontalFlexibleSash extends Disposable implements IHorizontalSas
 	}
 
 	public getHorizontalSashWidth?(): number {
-		return this.dimension?.width ?? 0;
+		return this.dimension.width;
 	}
 
-	public setDimension(dimension: Dimension) {
+	public setDimenesion(dimension: Dimension) {
 		this.dimension = dimension;
 		this.compute(this.ratio);
 	}

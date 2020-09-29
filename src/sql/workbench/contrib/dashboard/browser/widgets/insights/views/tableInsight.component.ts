@@ -3,7 +3,7 @@
  *  Licensed under the Source EULA. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Component, Input, Inject, forwardRef, ElementRef, OnInit } from '@angular/core';
+import { Component, Input, Inject, ChangeDetectorRef, forwardRef, ElementRef, OnInit } from '@angular/core';
 
 import { getContentHeight, getContentWidth, Dimension } from 'vs/base/browser/dom';
 import { Disposable } from 'vs/base/common/lifecycle';
@@ -13,7 +13,8 @@ import { Table } from 'sql/base/browser/ui/table/table';
 import { TableDataView } from 'sql/base/browser/ui/table/tableDataView';
 import { attachTableStyler } from 'sql/platform/theme/common/styler';
 import { CellSelectionModel } from 'sql/base/browser/ui/table/plugins/cellSelectionModel.plugin';
-import { IInsightsView, IInsightData } from 'sql/platform/dashboard/browser/insightRegistry';
+import { IInsightData } from 'sql/workbench/contrib/charts/browser/interfaces';
+import { IInsightsView } from 'sql/platform/dashboard/browser/insightRegistry';
 
 @Component({
 	template: ''
@@ -24,10 +25,12 @@ export default class TableInsight extends Disposable implements IInsightsView, O
 	private columns: Slick.Column<any>[];
 
 	constructor(
+		@Inject(forwardRef(() => ChangeDetectorRef)) private _changeRef: ChangeDetectorRef,
 		@Inject(forwardRef(() => ElementRef)) private _elementRef: ElementRef,
 		@Inject(IWorkbenchThemeService) private themeService: IWorkbenchThemeService
 	) {
 		super();
+		this._elementRef.nativeElement.className = 'slickgridContainer';
 	}
 
 	ngOnInit() {

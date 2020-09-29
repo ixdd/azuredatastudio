@@ -144,7 +144,7 @@ import { ErrorMessageService } from 'sql/workbench/services/errorMessage/browser
 import { ServerGroupController } from 'sql/workbench/services/serverGroup/browser/serverGroupController';
 import { IServerGroupController } from 'sql/platform/serverGroup/common/serverGroupController';
 import { ICapabilitiesService } from 'sql/platform/capabilities/common/capabilitiesService';
-import { CapabilitiesService } from 'sql/platform/capabilities/common/capabilitiesServiceImpl';
+import { CapabilitiesService } from 'sql/workbench/services/capabilities/common/capabilitiesServiceImpl';
 import { ICredentialsService as sqlICredentialsService, CredentialsService } from 'sql/platform/credentials/common/credentialsService';
 import { IQueryModelService } from 'sql/workbench/services/query/common/queryModel';
 import { QueryModelService } from 'sql/workbench/services/query/common/queryModelService';
@@ -155,7 +155,11 @@ import { IResourceProviderService } from 'sql/workbench/services/resourceProvide
 import { ResourceProviderService } from 'sql/workbench/services/resourceProvider/browser/resourceProviderService';
 import { IAdsTelemetryService } from 'sql/platform/telemetry/common/telemetry';
 import { AdsTelemetryService } from 'sql/platform/telemetry/common/adsTelemetryService';
+<<<<<<< HEAD
 import { OEShimService, IOEShimService } from 'sql/workbench/services/objectExplorer/browser/objectExplorerViewTreeShim';
+=======
+import { OEShimService, IOEShimService } from 'sql/workbench/contrib/objectExplorer/browser/objectExplorerViewTreeShim';
+>>>>>>> origin/workbenchlinting
 import { IObjectExplorerService, ObjectExplorerService } from 'sql/workbench/services/objectExplorer/browser/objectExplorerService';
 import { IAngularEventingService } from 'sql/platform/angularEventing/browser/angularEventingService';
 import { AngularEventingService } from 'sql/platform/angularEventing/browser/angularEventingServiceImpl';
@@ -184,8 +188,13 @@ import { IAccountManagementService } from 'sql/platform/accounts/common/interfac
 import { AccountManagementService } from 'sql/workbench/services/accountManagement/browser/accountManagementService';
 import { IProfilerService } from 'sql/workbench/services/profiler/browser/interfaces';
 import { ProfilerService } from 'sql/workbench/services/profiler/browser/profilerService';
+<<<<<<< HEAD
 import { AccountPickerService } from 'sql/workbench/services/accountManagement/browser/accountPickerService';
 import { IAccountPickerService } from 'sql/workbench/services/accountManagement/browser/accountPicker';
+=======
+import { AccountPickerService } from 'sql/workbench/contrib/accounts/browser/accountPickerService';
+import { IAccountPickerService } from 'sql/workbench/contrib/accounts/browser/accountPicker';
+>>>>>>> origin/workbenchlinting
 import { IDashboardViewService } from 'sql/platform/dashboard/browser/dashboardViewService';
 import { DashboardViewService } from 'sql/platform/dashboard/browser/dashboardViewServiceImpl';
 import { IModelViewService } from 'sql/platform/modelComponents/browser/modelViewService';
@@ -406,17 +415,24 @@ import 'vs/workbench/contrib/timeline/browser/timeline.contribution';
 
 // query
 import 'sql/workbench/contrib/query/browser/query.contribution';
+<<<<<<< HEAD
 import 'sql/workbench/contrib/query/common/resultsGrid.contribution';
+=======
+import 'sql/workbench/contrib/query/common/resultsGridContribution';
+>>>>>>> origin/workbenchlinting
 
 // data explorer
 import 'sql/workbench/contrib/dataExplorer/browser/dataExplorer.contribution';
 import 'sql/workbench/contrib/dataExplorer/browser/nodeActions.common.contribution';
+<<<<<<< HEAD
 
 //editor replacement
 import 'sql/workbench/contrib/editorReplacement/common/editorReplacer.contribution';
 
 //configurationUpgrader replacement
 import 'sql/workbench/contrib/configuration/common/configurationUpgrader.contribution';
+=======
+>>>>>>> origin/workbenchlinting
 
 // tasks
 import 'sql/workbench/contrib/tasks/browser/tasks.contribution';
@@ -427,7 +443,10 @@ import 'sql/workbench/contrib/telemetry/common/telemetry.contribution';
 
 // connection
 import 'sql/workbench/contrib/connection/browser/connection.contribution';
+<<<<<<< HEAD
 import 'sql/workbench/contrib/connection/common/connectionProviderExtension';
+=======
+>>>>>>> origin/workbenchlinting
 import 'sql/workbench/contrib/objectExplorer/common/serverGroup.contribution';
 
 // edit data editor
@@ -443,9 +462,12 @@ import 'sql/workbench/contrib/accounts/browser/accountManagement.contribution';
 // profiler
 import 'sql/workbench/contrib/profiler/browser/profiler.contribution';
 import 'sql/workbench/contrib/profiler/browser/profilerActions.contribution';
+<<<<<<< HEAD
 
 // resource viewer
 import 'sql/workbench/contrib/resourceViewer/browser/resourceViewer.contribution';
+=======
+>>>>>>> origin/workbenchlinting
 
 // dashboard
 import 'sql/workbench/contrib/dashboard/browser/widgets/insights/views/charts/types/barChart.contribution';
@@ -461,6 +483,10 @@ import 'sql/workbench/contrib/dashboard/browser/widgets/insights/views/tableInsi
 import 'sql/workbench/contrib/dashboard/browser/dashboard.contribution';
 import 'sql/workbench/contrib/dashboard/browser/widgets/insights/insightsWidget.contribution';
 import 'sql/workbench/contrib/dashboard/browser/widgets/explorer/explorerWidget.contribution';
+<<<<<<< HEAD
+=======
+import 'sql/workbench/contrib/dashboard/browser/widgets/tasks/tasksWidget.contribution';
+>>>>>>> origin/workbenchlinting
 import 'sql/workbench/contrib/dashboard/browser/widgets/webview/webviewWidget.contribution';
 import 'sql/workbench/contrib/dashboard/browser/containers/dashboardWebviewContainer.contribution';
 import 'sql/workbench/contrib/dashboard/browser/containers/dashboardControlHostContainer.contribution';
@@ -486,6 +512,7 @@ import 'sql/workbench/contrib/restore/browser/restore.contribution';
 
 // Scripting
 import 'sql/workbench/contrib/scripting/browser/scripting.contribution';
+<<<<<<< HEAD
 
 // Resource Deployment
 import 'sql/workbench/contrib/resourceDeployment/browser/resourceDeployment.contribution';
@@ -495,5 +522,7 @@ import 'sql/workbench/contrib/extensions/browser/extensions.contribution';
 
 // Azure
 import 'sql/workbench/contrib/azure/browser/azure.contribution';
+=======
+>>>>>>> origin/workbenchlinting
 
 //#endregion

@@ -8,13 +8,13 @@ import { localize } from 'vs/nls';
 import { Disposable } from 'vs/base/common/lifecycle';
 
 import { Table } from 'sql/base/browser/ui/table/table';
-import { PlanXmlParser } from 'sql/workbench/contrib/queryPlan/browser/planXmlParser';
+import { PlanXmlParser } from 'sql/workbench/contrib/queryPlan/common/planXmlParser';
 import { IPanelView, IPanelTab } from 'sql/base/browser/ui/panel/panel';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { attachTableStyler } from 'sql/platform/theme/common/styler';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { TableDataView } from 'sql/base/browser/ui/table/tableDataView';
-import { TopOperationsState } from 'sql/workbench/common/editor/query/topOperationsState';
+import { TopOperationsState } from 'sql/workbench/contrib/queryPlan/common/topOperationsState';
 
 const topOperationColumns: Array<Slick.Column<any>> = [
 	{ name: localize('topOperations.operation', "Operation"), field: 'operation', sortable: true },
@@ -50,7 +50,7 @@ export class TopOperationsTab extends Disposable implements IPanelTab {
 }
 
 export class TopOperationsView extends Disposable implements IPanelView {
-	private _state?: TopOperationsState;
+	private _state: TopOperationsState;
 	private table: Table<any>;
 	private container = document.createElement('div');
 	private dataView = new TableDataView();
@@ -66,7 +66,6 @@ export class TopOperationsView extends Disposable implements IPanelView {
 		});
 		this._register(this.table);
 		this._register(attachTableStyler(this.table, this.themeService));
-		this._register(this.dataView.onRowCountChange(() => this.table.updateRowCount()));
 	}
 
 	public render(container: HTMLElement): void {
@@ -86,19 +85,19 @@ export class TopOperationsView extends Disposable implements IPanelView {
 	}
 
 	public showPlan(xml: string) {
-		this.state!.xml = xml;
+		this.state.xml = xml;
 		this.dataView.clear();
 		let parser = new PlanXmlParser(xml);
 		let operations = parser.topOperations;
 		let data = operations.map(i => {
 			return {
 				operation: i.title,
-				object: i.indexObject?.title,
+				object: i.indexObject.title,
 				estCost: i.estimatedOperatorCost,
 				estSubtreeCost: i.subtreeCost,
-				actualRows: i.runtimeInfo?.actualRows,
+				actualRows: i.runtimeInfo.actualRows,
 				estRows: i.estimateRows,
-				actualExecutions: i.runtimeInfo?.actualExecutions,
+				actualExecutions: i.runtimeInfo.actualExecutions,
 				estCPUCost: i.estimateCpu,
 				estIOCost: i.estimateIo,
 				parallel: i.parallel,
@@ -112,14 +111,14 @@ export class TopOperationsView extends Disposable implements IPanelView {
 		this.dataView.push(data);
 	}
 
-	public setState(val: TopOperationsState) {
+	public set state(val: TopOperationsState) {
 		this._state = val;
-		if (this._state.xml) {
-			this.showPlan(this._state.xml);
+		if (this.state.xml) {
+			this.showPlan(this.state.xml);
 		}
 	}
 
-	public get state(): TopOperationsState | undefined {
+	public get state(): TopOperationsState {
 		return this._state;
 	}
 }

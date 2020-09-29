@@ -6,14 +6,14 @@
 import LineChart, { ILineConfig } from './lineChart.component';
 import { defaultChartConfig } from 'sql/workbench/contrib/dashboard/browser/widgets/insights/views/charts/interfaces';
 
-import { mixin, deepClone, assign } from 'vs/base/common/objects';
+import { mixin, deepClone } from 'vs/base/common/objects';
 import { Color } from 'vs/base/common/color';
 import { ChangeDetectorRef, Inject, forwardRef } from '@angular/core';
+import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
+import { ILogService } from 'vs/platform/log/common/log';
 import { IPointDataSet } from 'sql/workbench/contrib/charts/browser/interfaces';
 import { ChartType } from 'sql/workbench/contrib/charts/common/interfaces';
-import { values } from 'vs/base/common/collections';
-import { IAdsTelemetryService } from 'sql/platform/telemetry/common/telemetry';
 
 const defaultTimeSeriesConfig = mixin(deepClone(defaultChartConfig), { dataType: 'point', dataDirection: 'horizontal' }) as ILineConfig;
 
@@ -23,9 +23,10 @@ export default class TimeSeriesChart extends LineChart {
 	constructor(
 		@Inject(forwardRef(() => ChangeDetectorRef)) _changeRef: ChangeDetectorRef,
 		@Inject(IThemeService) themeService: IThemeService,
-		@Inject(IAdsTelemetryService) telemetryService: IAdsTelemetryService
+		@Inject(ITelemetryService) telemetryService: ITelemetryService,
+		@Inject(ILogService) logService: ILogService
 	) {
-		super(_changeRef, themeService, telemetryService);
+		super(_changeRef, themeService, telemetryService, logService);
 	}
 
 	protected addAxisLabels(): void {
@@ -58,7 +59,7 @@ export default class TimeSeriesChart extends LineChart {
 			}
 		};
 
-		this.options = assign({}, mixin(this.options, options));
+		this.options = Object.assign({}, mixin(this.options, options));
 	}
 
 	protected getDataAsPoint(): Array<IPointDataSet> {
@@ -72,10 +73,10 @@ export default class TimeSeriesChart extends LineChart {
 				dataSetMap[legend].data.push({ x: row[1], y: Number(row[2]) });
 
 				if (this.chartType === ChartType.Scatter) {
-					dataSetMap[legend].backgroundColor = Color.cyan.toString();
+					dataSetMap[legend].backgroundColor = Color.cyan;
 				}
 			}
 		});
-		return values(dataSetMap);
+		return Object.values(dataSetMap);
 	}
 }

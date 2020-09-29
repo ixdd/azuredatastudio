@@ -4,11 +4,19 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IConnectionProfile } from 'sql/platform/connection/common/interfaces';
+<<<<<<< HEAD
 import { ProfilerInput } from 'sql/workbench/browser/editor/profiler/profilerInput';
 
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import * as azdata from 'azdata';
 import { INewProfilerState } from 'sql/workbench/common/editor/profiler/profilerState';
+=======
+import { ProfilerInput } from 'sql/workbench/contrib/profiler/browser/profilerInput';
+
+import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
+import * as azdata from 'azdata';
+import { INewProfilerState } from 'sql/workbench/contrib/profiler/common/profilerState';
+>>>>>>> origin/workbenchlinting
 
 const PROFILER_SERVICE_ID = 'profilerService';
 export const IProfilerService = createDecorator<IProfilerService>(PROFILER_SERVICE_ID);

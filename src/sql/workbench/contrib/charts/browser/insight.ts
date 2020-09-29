@@ -6,14 +6,13 @@
 import { Graph } from './graphInsight';
 import { ImageInsight } from './imageInsight';
 import { TableInsight } from './tableInsight';
-import { IInsight, IInsightCtor } from './interfaces';
+import { IInsight, IInsightCtor, IInsightData } from './interfaces';
 import { CountInsight } from './countInsight';
 
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { Dimension, clearNode } from 'vs/base/browser/dom';
 import { deepClone } from 'vs/base/common/objects';
 import { IInsightOptions, ChartType, DataDirection, InsightType } from 'sql/workbench/contrib/charts/common/interfaces';
-import { IInsightData } from 'sql/platform/dashboard/browser/insightRegistry';
 
 const defaultOptions: IInsightOptions = {
 	type: ChartType.Bar,
@@ -21,15 +20,15 @@ const defaultOptions: IInsightOptions = {
 };
 
 export class Insight {
-	private _insight?: IInsight;
+	private _insight: IInsight;
 
-	public get insight(): IInsight | undefined {
+	public get insight(): IInsight {
 		return this._insight;
 	}
 
-	private _options?: IInsightOptions;
-	private _data?: IInsightData;
-	private dim?: Dimension;
+	private _options: IInsightOptions;
+	private _data: IInsightData;
+	private dim: Dimension;
 
 	constructor(
 		private container: HTMLElement, options: IInsightOptions = defaultOptions,
@@ -41,16 +40,14 @@ export class Insight {
 
 	public layout(dim: Dimension) {
 		this.dim = dim;
-		if (this.insight) {
-			this.insight.layout(dim);
-		}
+		this.insight.layout(dim);
 	}
 
-	public set options(val: IInsightOptions | undefined) {
+	public set options(val: IInsightOptions) {
 		this._options = deepClone(val);
-		if (this.insight && this.options) {
+		if (this.insight) {
 			// check to see if we need to change the insight type
-			if (!this.insight.types.find(x => x === this.options!.type)) {
+			if (!this.insight.types.includes(this.options.type)) {
 				this.buildInsight();
 			} else {
 				this.insight.options = this.options;
@@ -58,7 +55,7 @@ export class Insight {
 		}
 	}
 
-	public get options(): IInsightOptions | undefined {
+	public get options(): IInsightOptions {
 		return this._options;
 	}
 
@@ -76,34 +73,29 @@ export class Insight {
 
 		clearNode(this.container);
 
-		if (this.options) {
+		let ctor = this.findctor(this.options.type);
 
-			const ctor = this.findctor(this.options.type);
-
-			if (ctor) {
-				this._insight = this._instantiationService.createInstance(ctor, this.container, this.options);
-				if (this.dim) {
-					this.insight!.layout(this.dim);
-				}
-				if (this._data) {
-					this.insight!.data = this._data;
-				}
+		if (ctor) {
+			this._insight = this._instantiationService.createInstance(ctor, this.container, this.options);
+			this.insight.layout(this.dim);
+			if (this._data) {
+				this.insight.data = this._data;
 			}
 		}
 	}
 	public get isCopyable(): boolean {
-		return !!this.options && !!Graph.types.find(x => x === this.options!.type as ChartType);
+		return Graph.types.includes(this.options.type as ChartType);
 	}
 
-	private findctor(type: ChartType | InsightType): IInsightCtor | undefined {
-		if (Graph.types.find(x => x === type as ChartType)) {
-			return Graph as IInsightCtor;
-		} else if (ImageInsight.types.find(x => x === type as InsightType)) {
-			return ImageInsight as IInsightCtor;
-		} else if (TableInsight.types.find(x => x === type as InsightType)) {
-			return TableInsight as IInsightCtor;
-		} else if (CountInsight.types.find(x => x === type as InsightType)) {
-			return CountInsight as IInsightCtor;
+	private findctor(type: ChartType | InsightType): IInsightCtor {
+		if (Graph.types.includes(type as ChartType)) {
+			return Graph;
+		} else if (ImageInsight.types.includes(type as InsightType)) {
+			return ImageInsight;
+		} else if (TableInsight.types.includes(type as InsightType)) {
+			return TableInsight;
+		} else if (CountInsight.types.includes(type as InsightType)) {
+			return CountInsight;
 		}
 		return undefined;
 	}

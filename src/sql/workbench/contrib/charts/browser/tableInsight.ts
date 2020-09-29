@@ -3,7 +3,7 @@
  *  Licensed under the Source EULA. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IInsight } from './interfaces';
+import { IInsight, IInsightData } from './interfaces';
 import { TableDataView } from 'sql/base/browser/ui/table/tableDataView';
 import { Table } from 'sql/base/browser/ui/table/table';
 import { attachTableStyler } from 'sql/platform/theme/common/styler';
@@ -12,8 +12,7 @@ import { CellSelectionModel } from 'sql/base/browser/ui/table/plugins/cellSelect
 import { $, Dimension } from 'vs/base/browser/dom';
 import { Disposable } from 'vs/base/common/lifecycle';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
-import { IInsightOptions, InsightType } from 'sql/workbench/contrib/charts/common/interfaces';
-import { IInsightData } from 'sql/platform/dashboard/browser/insightRegistry';
+import { InsightType } from 'sql/workbench/contrib/charts/common/interfaces';
 
 export class TableInsight extends Disposable implements IInsight {
 	public static readonly types = [InsightType.Table];
@@ -21,8 +20,7 @@ export class TableInsight extends Disposable implements IInsight {
 
 	private table: Table<any>;
 	private dataView: TableDataView<any>;
-	private columns?: Slick.Column<any>[];
-	public options: IInsightOptions = { type: InsightType.Table };
+	private columns: Slick.Column<any>[];
 
 	constructor(container: HTMLElement, options: any,
 		@IThemeService themeService: IThemeService
@@ -48,6 +46,9 @@ export class TableInsight extends Disposable implements IInsight {
 	layout(dim: Dimension) {
 		this.table.layout(dim);
 	}
+
+	public options;
+
 }
 
 function transformData(rows: string[][], columns: string[]): { [key: string]: string }[] {

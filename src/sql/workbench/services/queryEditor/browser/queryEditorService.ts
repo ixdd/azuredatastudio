@@ -3,16 +3,35 @@
  *  Licensed under the Source EULA. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+<<<<<<< HEAD
 import { QueryResultsInput } from 'sql/workbench/common/editor/query/queryResultsInput';
 import { EditDataInput } from 'sql/workbench/browser/editData/editDataInput';
 import { IConnectableInput, IConnectionManagementService } from 'sql/platform/connection/common/connectionManagement';
 import { IQueryEditorService, INewSqlEditorOptions } from 'sql/workbench/services/queryEditor/common/queryEditorService';
 import { UntitledQueryEditorInput } from 'sql/workbench/common/editor/query/untitledQueryEditorInput';
+=======
+import { QueryResultsInput } from 'sql/workbench/contrib/query/common/queryResultsInput';
+import { QueryInput } from 'sql/workbench/contrib/query/common/queryInput';
+import { EditDataInput } from 'sql/workbench/contrib/editData/browser/editDataInput';
+import { IConnectableInput, IConnectionManagementService } from 'sql/platform/connection/common/connectionManagement';
+import { IQueryEditorService, IQueryEditorOptions } from 'sql/workbench/services/queryEditor/common/queryEditorService';
+import { QueryPlanInput } from 'sql/workbench/contrib/queryPlan/common/queryPlanInput';
+import { sqlModeId, untitledFilePrefix, getSupportedInputResource } from 'sql/workbench/browser/customInputConverter';
+import * as TaskUtilities from 'sql/workbench/browser/taskUtilities';
+>>>>>>> origin/workbenchlinting
 
 import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { URI } from 'vs/base/common/uri';
 import { Schemas } from 'vs/base/common/network';
+<<<<<<< HEAD
+=======
+import { INotificationService } from 'vs/platform/notification/common/notification';
+import { EditDataResultsInput } from 'sql/workbench/contrib/editData/browser/editDataResultsInput';
+import { IEditorInput, IEditor } from 'vs/workbench/common/editor';
+import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
+import { ILanguageSelection } from 'vs/editor/common/services/modeService';
+>>>>>>> origin/workbenchlinting
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { EditDataResultsInput } from 'sql/workbench/browser/editData/editDataResultsInput';
 import { IUntitledTextEditorService } from 'vs/workbench/services/untitled/common/untitledTextEditorService';

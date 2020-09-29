@@ -3,33 +3,34 @@
  *  Licensed under the Source EULA. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import 'vs/css!sql/media/icons/common-icons';
 import { Button } from 'sql/base/browser/ui/button/button';
 import { Modal } from 'sql/workbench/browser/modal/modal';
 import * as TelemetryKeys from 'sql/platform/telemetry/common/telemetryKeys';
-import { attachButtonStyler } from 'sql/platform/theme/common/styler';
+import { attachButtonStyler, attachModalDialogStyler } from 'sql/platform/theme/common/styler';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { Event, Emitter } from 'vs/base/common/event';
+import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
 import { IClipboardService } from 'vs/platform/clipboard/common/clipboardService';
 import { localize } from 'vs/nls';
+import { toDisposable } from 'vs/base/common/lifecycle';
+import { IWorkbenchLayoutService } from 'vs/workbench/services/layout/browser/layoutService';
 import * as DOM from 'vs/base/browser/dom';
 import { ILogService } from 'vs/platform/log/common/log';
 import { IWebviewService, WebviewElement } from 'vs/workbench/contrib/webview/browser/webview';
 import { generateUuid } from 'vs/base/common/uuid';
-import { ITextResourcePropertiesService } from 'vs/editor/common/services/textResourceConfigurationService';
-import { IAdsTelemetryService } from 'sql/platform/telemetry/common/telemetry';
-import { attachModalDialogStyler } from 'sql/workbench/common/styler';
-import { ILayoutService } from 'vs/platform/layout/browser/layoutService';
+import { ITextResourcePropertiesService } from 'vs/editor/common/services/resourceConfiguration';
 
 export class WebViewDialog extends Modal {
 
-	private _body?: HTMLElement;
-	private _okButton?: Button;
+	private _body: HTMLElement;
+	private _okButton: Button;
 	private _okLabel: string;
 	private _closeLabel: string;
-	private _webview?: WebviewElement;
-	private _html?: string;
-	private _headerTitle?: string;
+	private _webview: WebviewElement;
+	private _html: string;
+	private _headerTitle: string;
 
 	private _onOk = new Emitter<void>();
 	public onOk: Event<void> = this._onOk.event;
@@ -42,8 +43,8 @@ export class WebViewDialog extends Modal {
 	constructor(
 		@IThemeService themeService: IThemeService,
 		@IClipboardService clipboardService: IClipboardService,
-		@ILayoutService layoutService: ILayoutService,
-		@IAdsTelemetryService telemetryService: IAdsTelemetryService,
+		@IWorkbenchLayoutService layoutService: IWorkbenchLayoutService,
+		@ITelemetryService telemetryService: ITelemetryService,
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@ILogService logService: ILogService,
 		@IWebviewService private readonly webviewService: IWebviewService,
@@ -54,11 +55,11 @@ export class WebViewDialog extends Modal {
 		this._closeLabel = localize('webViewDialog.close', "Close");
 	}
 
-	public setHtml(value: string) {
+	public set html(value: string) {
 		this._html = value;
 	}
 
-	public get html(): string | undefined {
+	public get html(): string {
 		return this._html;
 	}
 
@@ -78,28 +79,29 @@ export class WebViewDialog extends Modal {
 		return this._closeLabel;
 	}
 
-	public setHeaderTitle(value: string) {
+	public set headerTitle(value: string) {
 		this._headerTitle = value;
 	}
 
-	public get headerTitle(): string | undefined {
+	public get headerTitle(): string {
 		return this._headerTitle;
 	}
 
 	protected renderBody(container: HTMLElement) {
 		this._body = DOM.append(container, DOM.$('div.webview-dialog'));
 
-		this._webview = this.webviewService.createWebviewElement(this.id,
+		this._webview = this.webviewService.createWebview(this.id,
 			{},
 			{
 				allowScripts: true
-			}, undefined);
+			});
 
 		this._webview.mountTo(this._body);
 
 		this._register(this._webview.onMessage(message => this._onMessage.fire(message)));
 
 		this._register(this._webview);
+		this._register(toDisposable(() => this._webview = null));
 	}
 
 	get onMessage(): Event<any> {
@@ -119,9 +121,7 @@ export class WebViewDialog extends Modal {
 	}
 
 	private updateDialogBody(): void {
-		if (this.html) {
-			this._webview!.html = this.html;
-		}
+		this._webview.html = this.html;
 	}
 
 	/* espace key */
@@ -145,15 +145,13 @@ export class WebViewDialog extends Modal {
 	}
 
 	public sendMessage(message: any): void {
-		if (this._webview) {
-			this._webview.postMessage(message);
-		}
+		this._webview.sendMessage(message);
 	}
 
 	public open() {
-		this.title = this.headerTitle ?? '';
+		this.title = this.headerTitle;
 		this.updateDialogBody();
 		this.show();
-		this._okButton!.focus();
+		this._okButton.focus();
 	}
 }

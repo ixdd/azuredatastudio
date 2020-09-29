@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ITree, IDataSource } from 'vs/base/parts/tree/browser/tree';
-import { TaskNode } from 'sql/workbench/services/tasks/common/tasksNode';
+import { TaskNode } from 'sql/platform/tasks/common/tasksNode';
 
 /**
  * Implements the DataSource(that returns a parent/children of an element) for the task history
@@ -16,7 +16,11 @@ export class TaskHistoryDataSource implements IDataSource {
 	 * No more than one element may use a given identifier.
 	 */
 	public getId(tree: ITree, element: any): string {
-		return (<TaskNode>element).id;
+		if (element instanceof TaskNode) {
+			return (<TaskNode>element).id;
+		} else {
+			return undefined;
+		}
 	}
 
 	/**

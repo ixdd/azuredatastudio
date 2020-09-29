@@ -7,13 +7,48 @@ import { Registry } from 'vs/platform/registry/common/platform';
 import { IExtensionPointUser, ExtensionsRegistry } from 'vs/workbench/services/extensions/common/extensionsRegistry';
 import { IJSONSchema } from 'vs/base/common/jsonSchema';
 import { localize } from 'vs/nls';
+import { Event, Emitter } from 'vs/base/common/event';
+import { deepClone } from 'vs/base/common/objects';
 
 import * as resources from 'vs/base/common/resources';
-import { ConnectionProviderProperties, ICapabilitiesService } from 'sql/platform/capabilities/common/capabilitiesService';
-import { IWorkbenchContributionsRegistry, Extensions as WorkbenchExtensions, IWorkbenchContribution } from 'vs/workbench/common/contributions';
-import { LifecyclePhase } from 'vs/platform/lifecycle/common/lifecycle';
-import type { IDisposable } from 'vs/base/common/lifecycle';
-import { isArray } from 'vs/base/common/types';
+import { ConnectionProviderProperties } from 'sql/platform/capabilities/common/capabilitiesService';
+
+export const Extensions = {
+	ConnectionProviderContributions: 'connection.providers'
+};
+
+export interface IConnectionProviderRegistry {
+	registerConnectionProvider(id: string, properties: ConnectionProviderProperties): void;
+	getProperties(id: string): ConnectionProviderProperties | undefined;
+	readonly onNewProvider: Event<{ id: string, properties: ConnectionProviderProperties }>;
+	readonly providers: { [id: string]: ConnectionProviderProperties };
+}
+
+class ConnectionProviderRegistryImpl implements IConnectionProviderRegistry {
+	private _providers = new Map<string, ConnectionProviderProperties>();
+	private _onNewProvider = new Emitter<{ id: string, properties: ConnectionProviderProperties }>();
+	public readonly onNewProvider: Event<{ id: string, properties: ConnectionProviderProperties }> = this._onNewProvider.event;
+
+	public registerConnectionProvider(id: string, properties: ConnectionProviderProperties): void {
+		this._providers.set(id, properties);
+		this._onNewProvider.fire({ id, properties });
+	}
+
+	public getProperties(id: string): ConnectionProviderProperties | undefined {
+		return this._providers.get(id);
+	}
+
+	public get providers(): { [id: string]: ConnectionProviderProperties } {
+		let rt: { [id: string]: ConnectionProviderProperties } = {};
+		this._providers.forEach((v, k) => {
+			rt[k] = deepClone(v);
+		});
+		return rt;
+	}
+}
+
+const connectionRegistry = new ConnectionProviderRegistryImpl();
+Registry.add(Extensions.ConnectionProviderContributions, connectionRegistry);
 
 const ConnectionProviderContrib: IJSONSchema = {
 	type: 'object',
@@ -25,10 +60,6 @@ const ConnectionProviderContrib: IJSONSchema = {
 		displayName: {
 			type: 'string',
 			description: localize('schema.displayName', "Display Name for the provider")
-		},
-		notebookKernelAlias: {
-			type: 'string',
-			description: localize('schema.notebookKernelAlias', "Notebook Kernel Alias for the provider")
 		},
 		iconPath: {
 			description: localize('schema.iconPath', "Icon path for the server type"),
@@ -99,34 +130,19 @@ const ConnectionProviderContrib: IJSONSchema = {
 						type: 'string'
 					},
 					defaultValue: {
-						type: ['string', 'number', 'boolean', 'object', 'integer', 'null', 'array']
-					},
-					defaultValueOsOverrides: {
-						type: 'array',
-						items: {
-							type: 'object',
-							properties: {
-								os: {
-									type: 'string',
-									enum: ['Windows', 'Macintosh', 'Linux']
-								},
-								defaultValueOverride: {
-									type: ['string', 'number', 'boolean', 'object', 'integer', 'null', 'array']
-								}
-							}
-						}
+						type: 'any'
 					},
 					objectType: {
-						type: ['string', 'number', 'boolean', 'object', 'integer', 'null', 'array']
+						type: 'any'
 					},
 					categoryValues: {
-						type: ['string', 'number', 'boolean', 'object', 'integer', 'null', 'array']
+						type: 'any'
 					},
 					isRequired: {
 						type: 'boolean'
 					},
 					isArray: {
-						type: 'boolean'
+						type: 'bolean'
 					}
 				}
 			}
@@ -135,42 +151,24 @@ const ConnectionProviderContrib: IJSONSchema = {
 	required: ['providerId']
 };
 
-const connectionProviderExtPoint = ExtensionsRegistry.registerExtensionPoint<ConnectionProviderProperties | ConnectionProviderProperties[]>({ extensionPoint: 'connectionProvider', jsonSchema: ConnectionProviderContrib });
+ExtensionsRegistry.registerExtensionPoint<ConnectionProviderProperties | ConnectionProviderProperties[]>({ extensionPoint: 'connectionProvider', jsonSchema: ConnectionProviderContrib }).setHandler(extensions => {
 
-class ConnectionProviderHandler implements IWorkbenchContribution {
-	private disposables = new Map<ConnectionProviderProperties, IDisposable>();
-
-	constructor(@ICapabilitiesService capabilitiesService: ICapabilitiesService) {
-		connectionProviderExtPoint.setHandler((extensions, delta) => {
-
-			function handleProvider(contrib: ConnectionProviderProperties) {
-				return capabilitiesService.registerConnectionProvider(contrib.providerId, contrib);
-			}
-
-			delta.added.forEach(added => {
-				resolveIconPath(added);
-				if (isArray(added.value)) {
-					for (const provider of added.value) {
-						this.disposables.set(provider, handleProvider(provider));
-					}
-				} else {
-					this.disposables.set(added.value, handleProvider(added.value));
-				}
-			});
-			delta.removed.forEach(removed => {
-				if (isArray(removed.value)) {
-					for (const provider of removed.value) {
-						this.disposables.get(provider)!.dispose();
-					}
-				} else {
-					this.disposables.get(removed.value)!.dispose();
-				}
-			});
-		});
+	function handleCommand(contrib: ConnectionProviderProperties, extension: IExtensionPointUser<any>) {
+		connectionRegistry.registerConnectionProvider(contrib.providerId, contrib);
 	}
-}
 
-Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench).registerWorkbenchContribution(ConnectionProviderHandler, LifecyclePhase.Restored);
+	for (let extension of extensions) {
+		const { value } = extension;
+		resolveIconPath(extension);
+		if (Array.isArray<ConnectionProviderProperties>(value)) {
+			for (let command of value) {
+				handleCommand(command, extension);
+			}
+		} else {
+			handleCommand(value, extension);
+		}
+	}
+});
 
 function resolveIconPath(extension: IExtensionPointUser<any>): void {
 	if (!extension || !extension.value) { return undefined; }
@@ -199,7 +197,7 @@ function resolveIconPath(extension: IExtensionPointUser<any>): void {
 
 	let baseDir = extension.description.extensionLocation.fsPath;
 	let properties: ConnectionProviderProperties = extension.value;
-	if (Array.isArray(properties)) {
+	if (Array.isArray<ConnectionProviderProperties>(properties)) {
 		for (let p of properties) {
 			toAbsolutePath(p['iconPath']);
 		}

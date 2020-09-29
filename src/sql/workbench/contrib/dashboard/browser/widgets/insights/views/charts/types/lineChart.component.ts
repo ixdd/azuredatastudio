@@ -6,13 +6,14 @@
 import { mixin, deepClone } from 'vs/base/common/objects';
 
 import BarChart, { IBarChartConfig } from './barChart.component';
+import { memoize, unmemoize } from 'sql/base/common/decorators';
 import { defaultChartConfig, IDataSet } from 'sql/workbench/contrib/dashboard/browser/widgets/insights/views/charts/interfaces';
 import { ChangeDetectorRef, Inject, forwardRef } from '@angular/core';
+import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
+import { ILogService } from 'vs/platform/log/common/log';
 import { IPointDataSet } from 'sql/workbench/contrib/charts/browser/interfaces';
 import { DataType, ChartType } from 'sql/workbench/contrib/charts/common/interfaces';
-import { values } from 'vs/base/common/collections';
-import { IAdsTelemetryService } from 'sql/platform/telemetry/common/telemetry';
 
 export interface ILineConfig extends IBarChartConfig {
 	dataType?: DataType;
@@ -28,9 +29,10 @@ export default class LineChart extends BarChart {
 	constructor(
 		@Inject(forwardRef(() => ChangeDetectorRef)) _changeRef: ChangeDetectorRef,
 		@Inject(IThemeService) themeService: IThemeService,
-		@Inject(IAdsTelemetryService) telemetryService: IAdsTelemetryService
+		@Inject(ITelemetryService) telemetryService: ITelemetryService,
+		@Inject(ILogService) logService: ILogService
 	) {
-		super(_changeRef, themeService, telemetryService);
+		super(_changeRef, themeService, telemetryService, logService);
 	}
 
 	public init() {
@@ -50,10 +52,10 @@ export default class LineChart extends BarChart {
 
 	protected clearMemoize() {
 		super.clearMemoize();
-		LineChart.MEMOIZER.clear();
+		unmemoize(this, 'getDataAsPoint');
 	}
 
-	@LineChart.MEMOIZER
+	@memoize
 	protected getDataAsPoint(): Array<IPointDataSet> {
 		const dataSetMap: { [label: string]: IPointDataSet } = {};
 		this._data.rows.map(row => {
@@ -65,7 +67,7 @@ export default class LineChart extends BarChart {
 				dataSetMap[legend].data.push({ x: Number(row[1]), y: Number(row[2]) });
 			}
 		});
-		return values(dataSetMap);
+		return Object.values(dataSetMap);
 	}
 
 	public get labels(): Array<string> {

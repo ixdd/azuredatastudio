@@ -5,8 +5,8 @@
 
 import { IProfilerService } from 'sql/workbench/services/profiler/browser/interfaces';
 import { IProfilerController } from 'sql/workbench/contrib/profiler/common/interfaces';
-import { ProfilerInput } from 'sql/workbench/browser/editor/profiler/profilerInput';
-import { Task } from 'sql/workbench/services/tasks/browser/tasksRegistry';
+import { ProfilerInput } from 'sql/workbench/contrib/profiler/browser/profilerInput';
+import { Task } from 'sql/platform/tasks/browser/tasksRegistry';
 import { ConnectionProfile } from 'sql/platform/connection/common/connectionProfile';
 import { IConnectionManagementService, IConnectionCompletionOptions } from 'sql/platform/connection/common/connectionManagement';
 import { IConnectionProfile } from 'sql/platform/connection/common/interfaces';
@@ -15,7 +15,9 @@ import { Action } from 'vs/base/common/actions';
 import * as nls from 'vs/nls';
 import { IEditorAction } from 'vs/editor/common/editorCommon';
 import { IEditorService, ACTIVE_GROUP } from 'vs/workbench/services/editor/common/editorService';
+import { ICommandService } from 'vs/platform/commands/common/commands';
 import { IInstantiationService, ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
+import { INotificationService } from 'vs/platform/notification/common/notification';
 
 export class ProfilerConnect extends Action {
 	private static readonly ConnectText = nls.localize('profilerAction.connect', "Connect");
@@ -86,7 +88,9 @@ export class ProfilerCreate extends Action {
 
 	constructor(
 		id: string, label: string,
-		@IProfilerService private _profilerService: IProfilerService
+		@ICommandService private _commandService: ICommandService,
+		@IProfilerService private _profilerService: IProfilerService,
+		@INotificationService private _notificationService: INotificationService
 	) {
 		super(id, label, 'add');
 	}

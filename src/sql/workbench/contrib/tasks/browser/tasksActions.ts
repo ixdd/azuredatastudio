@@ -5,23 +5,20 @@
 
 import { localize } from 'vs/nls';
 import { IWorkbenchLayoutService } from 'vs/workbench/services/layout/browser/layoutService';
-import { ToggleViewAction } from 'vs/workbench/browser/actions/layoutActions';
-import { IViewsService, IViewDescriptorService } from 'vs/workbench/common/views';
-import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
-import { TASKS_VIEW_ID } from 'sql/workbench/contrib/tasks/common/tasks';
+import { IPanelService } from 'vs/workbench/services/panel/common/panelService';
+import { TogglePanelAction } from 'vs/workbench/browser/panel';
+import { TASKS_PANEL_ID } from 'sql/workbench/contrib/tasks/common/tasks';
 
-export class ToggleTasksAction extends ToggleViewAction {
+export class ToggleTasksAction extends TogglePanelAction {
 
 	public static readonly ID = 'workbench.action.tasks.toggleTasks';
 	public static readonly LABEL = localize('toggleTasks', "Toggle Tasks");
 
 	constructor(
 		id: string, label: string,
-		@IViewsService viewsService: IViewsService,
-		@IViewDescriptorService viewDescriptorService: IViewDescriptorService,
-		@IContextKeyService contextKeyService: IContextKeyService,
-		@IWorkbenchLayoutService layoutService: IWorkbenchLayoutService
+		@IWorkbenchLayoutService layoutService: IWorkbenchLayoutService,
+		@IPanelService panelService: IPanelService,
 	) {
-		super(id, label, TASKS_VIEW_ID, viewsService, viewDescriptorService, contextKeyService, layoutService);
+		super(id, label, TASKS_PANEL_ID, panelService, layoutService);
 	}
 }

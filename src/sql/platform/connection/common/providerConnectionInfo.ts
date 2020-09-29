@@ -9,9 +9,12 @@ import { isString } from 'vs/base/common/types';
 import * as azdata from 'azdata';
 import * as Constants from 'sql/platform/connection/common/constants';
 import { ICapabilitiesService, ConnectionProviderProperties } from 'sql/platform/capabilities/common/capabilitiesService';
+<<<<<<< HEAD
 import { assign } from 'vs/base/common/objects';
 import { find } from 'vs/base/common/arrays';
 import { ConnectionOptionSpecialType, ServiceOptionType } from 'sql/platform/connection/common/interfaces';
+=======
+>>>>>>> origin/workbenchlinting
 
 type SettableProperty = 'serverName' | 'authenticationType' | 'databaseName' | 'password' | 'connectionName' | 'userName';
 

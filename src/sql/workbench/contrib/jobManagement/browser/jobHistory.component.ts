@@ -12,10 +12,10 @@ import { OnInit, Component, Inject, Input, forwardRef, ElementRef, ChangeDetecto
 import { Taskbar } from 'sql/base/browser/ui/taskbar/taskbar';
 import { AgentViewComponent } from 'sql/workbench/contrib/jobManagement/browser/agentView.component';
 import { CommonServiceInterface } from 'sql/workbench/services/bootstrap/browser/commonServiceInterface.service';
-import { RunJobAction, StopJobAction, EditJobAction, JobsRefreshAction } from 'sql/workbench/contrib/jobManagement/browser/jobActions';
-import { JobCacheObject } from 'sql/workbench/services/jobManagement/common/jobManagementService';
-import { JobManagementUtilities } from 'sql/workbench/services/jobManagement/browser/jobManagementUtilities';
-import { IJobManagementService } from 'sql/workbench/services/jobManagement/common/interfaces';
+import { RunJobAction, StopJobAction, EditJobAction, JobsRefreshAction } from 'sql/platform/jobManagement/browser/jobActions';
+import { JobCacheObject } from 'sql/platform/jobManagement/common/jobManagementService';
+import { JobManagementUtilities } from 'sql/platform/jobManagement/browser/jobManagementUtilities';
+import { IJobManagementService } from 'sql/platform/jobManagement/common/interfaces';
 import {
 	JobHistoryController, JobHistoryDataSource,
 	JobHistoryRenderer, JobHistoryFilter, JobHistoryModel, JobHistoryRow
@@ -33,7 +33,6 @@ import { IDashboardService } from 'sql/platform/dashboard/browser/dashboardServi
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import * as TelemetryKeys from 'sql/platform/telemetry/common/telemetryKeys';
-import { find } from 'vs/base/common/arrays';
 
 export const DASHBOARD_SELECTOR: string = 'jobhistory-component';
 
@@ -53,15 +52,17 @@ export class JobHistoryComponent extends JobManagementView implements OnInit {
 	private _treeFilter: JobHistoryFilter;
 
 	@ViewChild('table') private _tableContainer: ElementRef;
+	@ViewChild('jobsteps') private _jobStepsView: ElementRef;
 
 	@Input() public agentJobInfo: azdata.AgentJobInfo = undefined;
 	@Input() public agentJobHistories: azdata.AgentJobHistoryInfo[] = undefined;
 	public agentJobHistoryInfo: azdata.AgentJobHistoryInfo = undefined;
 
+	private _isVisible: boolean = false;
 	private _stepRows: JobStepsViewRow[] = [];
 	private _showSteps: boolean = undefined;
 	private _showPreviousRuns: boolean = undefined;
-	public _runStatus: string = undefined;
+	private _runStatus: string = undefined;
 	private _jobCacheObject: JobCacheObject;
 	private _agentJobInfo: azdata.AgentJobInfo;
 	private _noJobsAvailable: boolean = false;
@@ -199,19 +200,21 @@ export class JobHistoryComponent extends JobManagementView implements OnInit {
 		const self = this;
 		let cachedHistory = self._jobCacheObject.getJobHistory(element.jobID);
 		if (cachedHistory) {
-			self.agentJobHistoryInfo = find(cachedHistory,
+			self.agentJobHistoryInfo = cachedHistory.find(
 				history => self.formatTime(history.runDate) === self.formatTime(element.runDate));
 		} else {
-			self.agentJobHistoryInfo = find(self._treeController.jobHistories,
+			self.agentJobHistoryInfo = self._treeController.jobHistories.find(
 				history => self.formatTime(history.runDate) === self.formatTime(element.runDate));
 		}
 		if (self.agentJobHistoryInfo) {
 			self.agentJobHistoryInfo.runDate = self.formatTime(self.agentJobHistoryInfo.runDate);
 			if (self.agentJobHistoryInfo.steps) {
+				let jobStepStatus = this.didJobFail(self.agentJobHistoryInfo);
 				self._stepRows = self.agentJobHistoryInfo.steps.map(step => {
 					let stepViewRow = new JobStepsViewRow();
 					stepViewRow.message = step.message;
-					stepViewRow.runStatus = JobManagementUtilities.convertToStatusString(step.runStatus);
+					stepViewRow.runStatus = jobStepStatus ? JobManagementUtilities.convertToStatusString(0) :
+						JobManagementUtilities.convertToStatusString(step.runStatus);
 					self._runStatus = JobManagementUtilities.convertToStatusString(self.agentJobHistoryInfo.runStatus);
 					stepViewRow.stepName = step.stepDetails.stepName;
 					stepViewRow.stepId = step.stepDetails.id.toString();
@@ -222,18 +225,26 @@ export class JobHistoryComponent extends JobManagementView implements OnInit {
 				self._stepRows[0].stepId = nls.localize('stepRow.stepID', "Step ID");
 				self._stepRows[0].stepName = nls.localize('stepRow.stepName', "Step Name");
 				self._stepRows[0].message = nls.localize('stepRow.message', "Message");
-				self._showSteps = self._stepRows.length > 1;
+				this._showSteps = self._stepRows.length > 1;
 			} else {
 				self._showSteps = false;
 			}
 			if (self._agentViewComponent.showHistory) {
-				self._jobManagementService.onStepsChange(self._stepRows);
 				self._cd.detectChanges();
 			}
 		}
 	}
 
-	private buildHistoryTree(self: JobHistoryComponent, jobHistories: azdata.AgentJobHistoryInfo[]) {
+	private didJobFail(job: azdata.AgentJobHistoryInfo): boolean {
+		for (let i = 0; i < job.steps.length; i++) {
+			if (job.steps[i].runStatus === 0) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private buildHistoryTree(self: any, jobHistories: azdata.AgentJobHistoryInfo[]) {
 		self._treeController.jobHistories = jobHistories;
 		let jobHistoryRows: JobHistoryRow[] = this._treeController.jobHistories.map(job => self.convertToJobHistoryRow(job));
 		let sortedRows = jobHistoryRows.sort((row1, row2) => {
@@ -256,7 +267,7 @@ export class JobHistoryComponent extends JobManagementView implements OnInit {
 		}
 	}
 
-	public toggleCollapse(): void {
+	private toggleCollapse(): void {
 		let arrow: HTMLElement = jQuery('.resultsViewCollapsible').get(0);
 		let checkbox: any = document.getElementById('accordion');
 		if (arrow.className === 'resultsViewCollapsible' && checkbox.checked === false) {
@@ -266,7 +277,8 @@ export class JobHistoryComponent extends JobManagementView implements OnInit {
 		}
 	}
 
-	public goToJobs(): void {
+	private goToJobs(): void {
+		this._isVisible = false;
 		this._agentViewComponent.showHistory = false;
 	}
 
@@ -275,6 +287,7 @@ export class JobHistoryComponent extends JobManagementView implements OnInit {
 		jobHistoryRow.runDate = this.formatTime(historyInfo.runDate);
 		jobHistoryRow.runStatus = JobManagementUtilities.convertToStatusString(historyInfo.runStatus);
 		jobHistoryRow.instanceID = historyInfo.instanceId;
+		jobHistoryRow.jobID = historyInfo.jobId;
 		return jobHistoryRow;
 	}
 

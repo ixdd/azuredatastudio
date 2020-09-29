@@ -9,7 +9,22 @@ import { Disposable, IDisposable, toDisposable } from 'vs/base/common/lifecycle'
 import * as azdata from 'azdata';
 
 import { toObject } from 'sql/base/common/map';
+<<<<<<< HEAD:src/sql/platform/capabilities/common/capabilitiesServiceImpl.ts
 import { ICapabilitiesService, ProviderFeatures, clientCapabilities, ConnectionProviderProperties } from 'sql/platform/capabilities/common/capabilitiesService';
+=======
+import { IConnectionProviderRegistry, Extensions as ConnectionExtensions } from 'sql/workbench/contrib/connection/common/connectionProviderExtension';
+import { ICapabilitiesService, ProviderFeatures, clientCapabilities, ConnectionProviderProperties } from 'sql/platform/capabilities/common/capabilitiesService';
+
+const connectionRegistry = Registry.as<IConnectionProviderRegistry>(ConnectionExtensions.ConnectionProviderContributions);
+
+interface ConnectionCache {
+	[id: string]: ConnectionProviderProperties;
+}
+
+interface CapabilitiesMomento {
+	connectionProviderCache: ConnectionCache;
+}
+>>>>>>> origin/workbenchlinting:src/sql/workbench/services/capabilities/common/capabilitiesServiceImpl.ts
 
 /**
  * Capabilities service implementation class.  This class provides the ability

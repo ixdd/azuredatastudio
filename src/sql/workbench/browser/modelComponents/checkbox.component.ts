@@ -12,6 +12,10 @@ import * as azdata from 'azdata';
 
 import { ComponentBase } from 'sql/workbench/browser/modelComponents/componentBase';
 import { Checkbox, ICheckboxOptions } from 'sql/base/browser/ui/checkbox/checkbox';
+<<<<<<< HEAD
+=======
+import { CommonServiceInterface } from 'sql/workbench/services/bootstrap/browser/commonServiceInterface.service';
+>>>>>>> origin/workbenchlinting
 import { attachCheckboxStyler } from 'sql/platform/theme/common/styler';
 import { IWorkbenchThemeService } from 'vs/workbench/services/themes/common/workbenchThemeService';
 import { IComponent, IComponentDescriptor, IModelStore, ComponentEventType } from 'sql/platform/dashboard/browser/interfaces';

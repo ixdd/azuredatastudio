@@ -12,6 +12,7 @@ import { ContextKeyExpr, IContextKeyService } from 'vs/platform/contextkey/commo
 import { WidgetConfig } from 'sql/workbench/contrib/dashboard/browser/core/dashboardWidget';
 import { Extensions, IInsightRegistry } from 'sql/platform/dashboard/browser/insightRegistry';
 import { ConnectionManagementInfo } from 'sql/platform/connection/common/connectionManagementInfo';
+import { DashboardServiceInterface } from 'sql/workbench/contrib/dashboard/browser/services/dashboardServiceInterface.service';
 import { WIDGETS_CONTAINER } from 'sql/workbench/contrib/dashboard/browser/containers/dashboardWidgetContainer.contribution';
 import { GRID_CONTAINER } from 'sql/workbench/contrib/dashboard/browser/containers/dashboardGridContainer.contribution';
 import { WEBVIEW_CONTAINER } from 'sql/workbench/contrib/dashboard/browser/containers/dashboardWebviewContainer.contribution';
@@ -22,7 +23,6 @@ import { IDashboardContainerRegistry, Extensions as DashboardContainerExtensions
 import { SingleConnectionManagementService } from 'sql/workbench/services/bootstrap/browser/commonServiceInterface.service';
 import * as Constants from 'sql/platform/connection/common/constants';
 import { ILogService } from 'vs/platform/log/common/log';
-import { find } from 'vs/base/common/arrays';
 
 const dashboardcontainerRegistry = Registry.as<IDashboardContainerRegistry>(DashboardContainerExtensions.dashboardContainerContributions);
 const containerTypes = [
@@ -110,7 +110,7 @@ export function addProvider<T extends { connectionManagementService: SingleConne
  * Adds the edition to the passed widgets and returns the new widgets
  * @param widgets Array of widgets to add edition onto
  */
-export function addEdition<T extends { connectionManagementService: SingleConnectionManagementService }>(config: WidgetConfig[], collection: T): Array<WidgetConfig> {
+export function addEdition<T extends { connectionManagementService: SingleConnectionManagementService }>(config: WidgetConfig[], collection: DashboardServiceInterface): Array<WidgetConfig> {
 	const connectionInfo: ConnectionManagementInfo = collection.connectionManagementService.connectionInfo;
 	if (connectionInfo.serverInfo) {
 		const edition = connectionInfo.serverInfo.engineEditionId;
@@ -163,7 +163,7 @@ function hasCompatibleProvider(provider: string | string[], contextKeyService: I
 	const connectionProvider = contextKeyService.getContextKeyValue<string>(Constants.connectionProviderContextKey);
 	if (connectionProvider) {
 		const providers = (provider instanceof Array) ? provider : [provider];
-		const matchingProvider = find(providers, (p) => p === connectionProvider || p === Constants.anyProviderName);
+		const matchingProvider = providers.find((p) => p === connectionProvider || p === Constants.anyProviderName);
 		isCompatible = (matchingProvider !== undefined);
 	}	// Else there's no connection context so skip the check
 	return isCompatible;
@@ -173,9 +173,9 @@ function hasCompatibleProvider(provider: string | string[], contextKeyService: I
  * Get registered container if it is specified as the key
  * @param container dashboard container
  */
-export function getDashboardContainer(container: object, logService: ILogService): { result: boolean, message: string, container: { [key: string]: any } } {
+export function getDashboardContainer(container: object, logService: ILogService): { result: boolean, message: string, container: object } {
 	const key = Object.keys(container)[0];
-	const containerTypeFound = find(containerTypes, c => (c === key));
+	const containerTypeFound = containerTypes.find(c => (c === key));
 	if (!containerTypeFound) {
 		const dashboardContainer = dashboardcontainerRegistry.getRegisteredContainer(key);
 		if (!dashboardContainer) {

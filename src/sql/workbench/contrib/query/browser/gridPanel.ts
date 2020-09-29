@@ -5,22 +5,24 @@
 
 import 'vs/css!./media/gridPanel';
 
-import { ITableStyles, ITableMouseEvent } from 'sql/base/browser/ui/table/interfaces';
 import { attachTableStyler } from 'sql/platform/theme/common/styler';
-import QueryRunner, { QueryGridDataProvider } from 'sql/workbench/services/query/common/queryRunner';
-import { ResultSetSummary, IColumn } from 'sql/workbench/services/query/common/query';
+import QueryRunner, { QueryGridDataProvider } from 'sql/platform/query/common/queryRunner';
 import { VirtualizedCollection, AsyncDataProvider } from 'sql/base/browser/ui/table/asyncDataView';
 import { Table } from 'sql/base/browser/ui/table/table';
+import { ScrollableSplitView, IView } from 'sql/base/browser/ui/scrollableSplitview/scrollableSplitview';
 import { MouseWheelSupport } from 'sql/base/browser/ui/table/plugins/mousewheelTableScroll.plugin';
 import { AutoColumnSize } from 'sql/base/browser/ui/table/plugins/autoSizeColumns.plugin';
+import { SaveFormat } from 'sql/workbench/contrib/grid/common/interfaces';
 import { IGridActionContext, SaveResultAction, CopyResultAction, SelectAllGridAction, MaximizeTableAction, RestoreTableAction, ChartDataAction, VisualizerDataAction } from 'sql/workbench/contrib/query/browser/actions';
 import { CellSelectionModel } from 'sql/base/browser/ui/table/plugins/cellSelectionModel.plugin';
 import { RowNumberColumn } from 'sql/base/browser/ui/table/plugins/rowNumberColumn.plugin';
 import { escape } from 'sql/base/common/strings';
 import { hyperLinkFormatter, textFormatter } from 'sql/base/browser/ui/table/formatters';
-import { AdditionalKeyBindings } from 'sql/base/browser/ui/table/plugins/additionalKeyBindings.plugin';
 import { CopyKeybind } from 'sql/base/browser/ui/table/plugins/copyKeybind.plugin';
-import { GridTable as HighPerfGridTable } from 'sql/workbench/contrib/query/browser/highPerfGridPanel';
+import { AdditionalKeyBindings } from 'sql/base/browser/ui/table/plugins/additionalKeyBindings.plugin';
+import { ITableStyles, ITableMouseEvent } from 'sql/base/browser/ui/table/interfaces';
+
+import * as azdata from 'azdata';
 
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
@@ -28,26 +30,23 @@ import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
 import { Emitter, Event } from 'vs/base/common/event';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { isUndefinedOrNull } from 'vs/base/common/types';
+import { range } from 'vs/base/common/arrays';
+import { Orientation } from 'vs/base/browser/ui/splitview/splitview';
 import { Disposable, dispose, DisposableStore } from 'vs/base/common/lifecycle';
-import { range, find } from 'vs/base/common/arrays';
 import { generateUuid } from 'vs/base/common/uuid';
-import { ActionBar, ActionsOrientation } from 'vs/base/browser/ui/actionbar/actionbar';
+import { Separator, ActionBar, ActionsOrientation } from 'vs/base/browser/ui/actionbar/actionbar';
 import { isInDOM, Dimension } from 'vs/base/browser/dom';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
+import { IUntitledEditorService } from 'vs/workbench/services/untitled/common/untitledEditorService';
 import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
-import { IAction, Separator } from 'vs/base/common/actions';
+import { IAction } from 'vs/base/common/actions';
+import { ScrollbarVisibility } from 'vs/base/common/scrollable';
 import { ILogService } from 'vs/platform/log/common/log';
 import { localize } from 'vs/nls';
-import { IGridDataProvider } from 'sql/workbench/services/query/common/gridDataProvider';
+import { IGridDataProvider } from 'sql/platform/query/common/gridDataProvider';
 import { formatDocumentWithSelectedProvider, FormattingMode } from 'vs/editor/contrib/format/format';
 import { CancellationToken } from 'vs/base/common/cancellation';
-import { GridPanelState, GridTableState } from 'sql/workbench/common/editor/query/gridTableState';
-import { IUntitledTextEditorService } from 'vs/workbench/services/untitled/common/untitledTextEditorService';
-import { SaveFormat } from 'sql/workbench/services/query/common/resultSerializer';
-import { Progress } from 'vs/platform/progress/common/progress';
-import { ScrollableView, IView } from 'sql/base/browser/ui/scrollableView/scrollableView';
-import { IQueryEditorConfiguration } from 'sql/platform/query/common/query';
-import { Orientation } from 'vs/base/browser/ui/splitview/splitview';
+import { GridPanelState, GridTableState } from 'sql/workbench/contrib/query/common/gridPanelState';
 
 const ROW_HEIGHT = 29;
 const HEADER_HEIGHT = 26;
@@ -64,29 +63,28 @@ const MIN_GRID_HEIGHT = (MIN_GRID_HEIGHT_ROWS * ROW_HEIGHT) + HEADER_HEIGHT + ES
 
 export class GridPanel extends Disposable {
 	private container = document.createElement('div');
-	private scrollableView: ScrollableView;
-	private tables: Array<GridTable<any> | HighPerfGridTable<any>> = [];
+	private splitView: ScrollableSplitView;
+	private tables: GridTable<any>[] = [];
 	private tableDisposable = this._register(new DisposableStore());
 	private queryRunnerDisposables = this._register(new DisposableStore());
+	private currentHeight: number;
 
 	private runner: QueryRunner;
 
-	private maximizedGrid: GridTable<any> | HighPerfGridTable<any>;
+	private maximizedGrid: GridTable<any>;
 	private _state: GridPanelState | undefined;
-
-	private readonly optimized = this.configurationService.getValue<IQueryEditorConfiguration>('queryEditor').results.optimizedTable;
 
 	constructor(
 		@IConfigurationService private readonly configurationService: IConfigurationService,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
-		@ILogService private readonly logService: ILogService,
 		@IThemeService private readonly themeService: IThemeService,
+		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@ILogService private readonly logService: ILogService
 	) {
 		super();
-		this.scrollableView = new ScrollableView(this.container, { scrollDebouce: this.optimized ? 0 : undefined });
-		this.scrollableView.onDidScroll(e => {
-			if (this.state && this.scrollableView.length !== 0) {
-				this.state.scrollPosition = e.scrollTop;
+		this.splitView = new ScrollableSplitView(this.container, { enableResizing: false, verticalScrollbarVisibility: ScrollbarVisibility.Visible });
+		this.splitView.onScroll(e => {
+			if (this.state && this.splitView.length !== 0) {
+				this.state.scrollPosition = e;
 			}
 		});
 	}
@@ -99,12 +97,16 @@ export class GridPanel extends Disposable {
 	}
 
 	public layout(size: Dimension): void {
-		this.scrollableView.layout(size.height, size.width);
+		this.splitView.layout(size.height);
+		// if the size hasn't change it won't layout our table so we have to do it manually
+		if (size.height === this.currentHeight) {
+			this.tables.map(e => e.layout());
+		}
+		this.currentHeight = size.height;
 	}
 
 	public focus(): void {
 		// will need to add logic to save the focused grid and focus that
-		this.tables[0].focus();
 	}
 
 	public set queryRunner(runner: QueryRunner) {
@@ -119,8 +121,8 @@ export class GridPanel extends Disposable {
 			}
 			this.reset();
 		}));
-		this.addResultSet(this.runner.batchSets.reduce<ResultSetSummary[]>((p, e) => {
-			if (this.configurationService.getValue<IQueryEditorConfiguration>('queryEditor').results.streaming) {
+		this.addResultSet(this.runner.batchSets.reduce<azdata.ResultSetSummary[]>((p, e) => {
+			if (this.configurationService.getValue<boolean>('sql.results.streaming')) {
 				p = p.concat(e.resultSetSummaries);
 			} else {
 				p = p.concat(e.resultSetSummaries.filter(c => c.complete));
@@ -129,16 +131,16 @@ export class GridPanel extends Disposable {
 		}, []));
 
 		if (this.state && this.state.scrollPosition) {
-			this.scrollableView.setScrollTop(this.state.scrollPosition);
+			this.splitView.setScrollPosition(this.state.scrollPosition);
 		}
 	}
 
 	public resetScrollPosition(): void {
-		this.scrollableView.setScrollTop(this.state.scrollPosition);
+		this.splitView.setScrollPosition(this.state.scrollPosition);
 	}
 
-	private onResultSet(resultSet: ResultSetSummary | ResultSetSummary[]) {
-		let resultsToAdd: ResultSetSummary[];
+	private onResultSet(resultSet: azdata.ResultSetSummary | azdata.ResultSetSummary[]) {
+		let resultsToAdd: azdata.ResultSetSummary[];
 		if (!Array.isArray(resultSet)) {
 			resultsToAdd = [resultSet];
 		} else {
@@ -150,11 +152,11 @@ export class GridPanel extends Disposable {
 			});
 
 			if (this.state && this.state.scrollPosition) {
-				this.scrollableView.setScrollTop(this.state.scrollPosition);
+				this.splitView.setScrollPosition(this.state.scrollPosition);
 			}
 		};
 
-		if (this.configurationService.getValue<IQueryEditorConfiguration>('queryEditor').results.streaming) {
+		if (this.configurationService.getValue<boolean>('sql.results.streaming')) {
 			this.addResultSet(resultsToAdd);
 			sizeChanges();
 		} else {
@@ -166,8 +168,8 @@ export class GridPanel extends Disposable {
 		}
 	}
 
-	private updateResultSet(resultSet: ResultSetSummary | ResultSetSummary[]) {
-		let resultsToUpdate: ResultSetSummary[];
+	private updateResultSet(resultSet: azdata.ResultSetSummary | azdata.ResultSetSummary[]) {
+		let resultsToUpdate: azdata.ResultSetSummary[];
 		if (!Array.isArray(resultSet)) {
 			resultsToUpdate = [resultSet];
 		} else {
@@ -176,13 +178,13 @@ export class GridPanel extends Disposable {
 
 		const sizeChanges = () => {
 			if (this.state && this.state.scrollPosition) {
-				this.scrollableView.setScrollTop(this.state.scrollPosition);
+				this.splitView.setScrollPosition(this.state.scrollPosition);
 			}
 		};
 
-		if (this.configurationService.getValue<IQueryEditorConfiguration>('queryEditor').results.streaming) {
+		if (this.configurationService.getValue<boolean>('sql.results.streaming')) {
 			for (let set of resultsToUpdate) {
-				let table = find(this.tables, t => t.resultSet.batchId === set.batchId && t.resultSet.id === set.id);
+				let table = this.tables.find(t => t.resultSet.batchId === set.batchId && t.resultSet.id === set.id);
 				if (table) {
 					table.updateResult(set);
 				} else {
@@ -199,17 +201,17 @@ export class GridPanel extends Disposable {
 		}
 	}
 
-	private addResultSet(resultSet: ResultSetSummary[]) {
-		const tables: Array<GridTable<any> | HighPerfGridTable<any>> = [];
+	private addResultSet(resultSet: azdata.ResultSetSummary[]) {
+		let tables: GridTable<any>[] = [];
 
-		for (const set of resultSet) {
+		for (let set of resultSet) {
 			// ensure we aren't adding a resultSet that is already visible
-			if (find(this.tables, t => t.resultSet.batchId === set.batchId && t.resultSet.id === set.id)) {
+			if (this.tables.find(t => t.resultSet.batchId === set.batchId && t.resultSet.id === set.id)) {
 				continue;
 			}
 			let tableState: GridTableState;
 			if (this.state) {
-				tableState = find(this.state.tableStates, e => e.batchId === set.batchId && e.resultId === set.id);
+				tableState = this.state.tableStates.find(e => e.batchId === set.batchId && e.resultId === set.id);
 			}
 			if (!tableState) {
 				tableState = new GridTableState(set.id, set.batchId);
@@ -217,12 +219,7 @@ export class GridPanel extends Disposable {
 					this.state.tableStates.push(tableState);
 				}
 			}
-			let table: GridTable<any> | HighPerfGridTable<any>;
-			if (this.optimized) {
-				table = this.instantiationService.createInstance(HighPerfGridTable, this.runner, set, tableState);
-			} else {
-				table = this.instantiationService.createInstance(GridTable, this.runner, set, tableState);
-			}
+			let table = this.instantiationService.createInstance(GridTable, this.runner, set, tableState);
 			this.tableDisposable.add(tableState.onMaximizedChange(e => {
 				if (e) {
 					this.maximizeTable(table.id);
@@ -245,7 +242,7 @@ export class GridPanel extends Disposable {
 		}
 
 		if (isUndefinedOrNull(this.maximizedGrid)) {
-			this.scrollableView.addViews(tables);
+			this.splitView.addViews(tables, tables.map(i => i.minimumSize), this.splitView.length);
 		}
 	}
 
@@ -255,7 +252,9 @@ export class GridPanel extends Disposable {
 	}
 
 	private reset() {
-		this.scrollableView.clear();
+		for (let i = this.splitView.length - 1; i >= 0; i--) {
+			this.splitView.removeView(i);
+		}
 		dispose(this.tables);
 		this.tableDisposable.clear();
 		this.tables = [];
@@ -263,19 +262,18 @@ export class GridPanel extends Disposable {
 	}
 
 	private maximizeTable(tableid: string): void {
-		if (!find(this.tables, t => t.id === tableid)) {
+		if (!this.tables.find(t => t.id === tableid)) {
 			return;
 		}
 
 		for (let i = this.tables.length - 1; i >= 0; i--) {
 			if (this.tables[i].id === tableid) {
-				const selectedTable = this.tables[i];
-				selectedTable.state.maximized = true;
-				this.maximizedGrid = selectedTable;
-				this.scrollableView.clear();
-				this.scrollableView.addViews([selectedTable]);
-				break;
+				this.tables[i].state.maximized = true;
+				this.maximizedGrid = this.tables[i];
+				continue;
 			}
+
+			this.splitView.removeView(i);
 		}
 	}
 
@@ -283,8 +281,8 @@ export class GridPanel extends Disposable {
 		if (this.maximizedGrid) {
 			this.maximizedGrid.state.maximized = false;
 			this.maximizedGrid = undefined;
-			this.scrollableView.clear();
-			this.scrollableView.addViews(this.tables);
+			this.splitView.removeView(0);
+			this.splitView.addViews(this.tables, this.tables.map(i => i.minimumSize));
 		}
 	}
 
@@ -292,7 +290,7 @@ export class GridPanel extends Disposable {
 		this._state = val;
 		if (this.state) {
 			this.tables.map(t => {
-				let state = find(this.state.tableStates, s => s.batchId === t.resultSet.batchId && s.resultId === t.resultSet.id);
+				let state = this.state.tableStates.find(s => s.batchId === t.resultSet.batchId && s.resultId === t.resultSet.id);
 				if (!state) {
 					this.state.tableStates.push(t.state);
 				}
@@ -316,18 +314,14 @@ export class GridPanel extends Disposable {
 
 export interface IDataSet {
 	rowCount: number;
-	columnInfo: IColumn[];
-}
-
-export interface IGridTableOptions {
-	actionOrientation: ActionsOrientation;
+	columnInfo: azdata.IDbColumn[];
 }
 
 export abstract class GridTableBase<T> extends Disposable implements IView {
 	private table: Table<T>;
 	private actionBar: ActionBar;
 	private container = document.createElement('div');
-	private selectionModel = new CellSelectionModel<T>();
+	private selectionModel = new CellSelectionModel();
 	private styles: ITableStyles;
 	private currentHeight: number;
 	private dataProvider: AsyncDataProvider<T>;
@@ -341,7 +335,6 @@ export abstract class GridTableBase<T> extends Disposable implements IView {
 
 	public id = generateUuid();
 	readonly element: HTMLElement = this.container;
-	protected tableContainer: HTMLElement;
 
 	private _state: GridTableState;
 
@@ -357,23 +350,14 @@ export abstract class GridTableBase<T> extends Disposable implements IView {
 		return ((this.resultSet.rowCount) * this.rowHeight) + HEADER_HEIGHT + ESTIMATED_SCROLL_BAR_HEIGHT;
 	}
 
-	public focus(): void {
-		if (!this.table.activeCell) {
-			this.table.setActiveCell(0, 1);
-			this.selectionModel.setSelectedRanges([new Slick.Range(0, 1)]);
-		}
-		this.table.focus();
-	}
-
 	constructor(
 		state: GridTableState,
-		protected _resultSet: ResultSetSummary,
-		private readonly options: IGridTableOptions = { actionOrientation: ActionsOrientation.VERTICAL },
-		@IContextMenuService private readonly contextMenuService: IContextMenuService,
-		@IInstantiationService protected readonly instantiationService: IInstantiationService,
-		@IEditorService private readonly editorService: IEditorService,
-		@IUntitledTextEditorService private readonly untitledEditorService: IUntitledTextEditorService,
-		@IConfigurationService private readonly configurationService: IConfigurationService
+		protected _resultSet: azdata.ResultSetSummary,
+		protected contextMenuService: IContextMenuService,
+		protected instantiationService: IInstantiationService,
+		protected editorService: IEditorService,
+		protected untitledEditorService: IUntitledEditorService,
+		protected configurationService: IConfigurationService
 	) {
 		super();
 		let config = this.configurationService.getValue<{ rowHeight: number }>('resultsGrid');
@@ -381,6 +365,7 @@ export abstract class GridTableBase<T> extends Disposable implements IView {
 		this.state = state;
 		this.container.style.width = '100%';
 		this.container.style.height = '100%';
+		this.container.className = 'grid-panel';
 
 		this.columns = this.resultSet.columnInfo.map((c, i) => {
 			let isLinked = c.isXml || c.isJson;
@@ -399,14 +384,11 @@ export abstract class GridTableBase<T> extends Disposable implements IView {
 
 	abstract get gridDataProvider(): IGridDataProvider;
 
-	public get resultSet(): ResultSetSummary {
+	public get resultSet(): azdata.ResultSetSummary {
 		return this._resultSet;
 	}
 
-	public onDidInsert() {
-		if (!this.table) {
-			this.build();
-		}
+	public onAdd() {
 		this.visible = true;
 		let collection = new VirtualizedCollection(
 			50,
@@ -422,7 +404,7 @@ export abstract class GridTableBase<T> extends Disposable implements IView {
 		this.setupState();
 	}
 
-	public onDidRemove() {
+	public onRemove() {
 		this.visible = false;
 		let collection = new VirtualizedCollection(
 			50,
@@ -437,21 +419,26 @@ export abstract class GridTableBase<T> extends Disposable implements IView {
 	}
 
 	// actionsOrientation controls the orientation (horizontal or vertical) of the actionBar
-	private build(): void {
+	private build(actionsOrientation?: ActionsOrientation): void {
+
+		// Default is VERTICAL
+		if (isUndefinedOrNull(actionsOrientation)) {
+			actionsOrientation = ActionsOrientation.VERTICAL;
+		}
+
 		let actionBarContainer = document.createElement('div');
 
 		// Create a horizontal actionbar if orientation passed in is HORIZONTAL
-		if (this.options.actionOrientation === ActionsOrientation.HORIZONTAL) {
+		if (actionsOrientation === ActionsOrientation.HORIZONTAL) {
 			actionBarContainer.className = 'grid-panel action-bar horizontal';
 			this.container.appendChild(actionBarContainer);
 		}
 
-		this.tableContainer = document.createElement('div');
-		this.tableContainer.className = 'grid-panel';
-		this.tableContainer.style.display = 'inline-block';
-		this.tableContainer.style.width = `calc(100% - ${ACTIONBAR_WIDTH}px)`;
+		let tableContainer = document.createElement('div');
+		tableContainer.style.display = 'inline-block';
+		tableContainer.style.width = `calc(100% - ${ACTIONBAR_WIDTH}px)`;
 
-		this.container.appendChild(this.tableContainer);
+		this.container.appendChild(tableContainer);
 
 		let collection = new VirtualizedCollection(
 			50,
@@ -463,7 +450,7 @@ export abstract class GridTableBase<T> extends Disposable implements IView {
 			this.renderGridDataRowsRange(startIndex, count);
 		});
 		this.rowNumberColumn = new RowNumberColumn({ numberOfRows: this.resultSet.rowCount });
-		let copyHandler = new CopyKeybind<T>();
+		let copyHandler = new CopyKeybind();
 		copyHandler.onCopy(e => {
 			new CopyResultAction(CopyResultAction.COPY_ID, CopyResultAction.COPY_LABEL, false).run(this.generateContext());
 		});
@@ -475,7 +462,7 @@ export abstract class GridTableBase<T> extends Disposable implements IView {
 			defaultColumnWidth: 120
 		};
 		this.dataProvider = new AsyncDataProvider(collection);
-		this.table = this._register(new Table(this.tableContainer, { dataProvider: this.dataProvider, columns: this.columns }, tableOptions));
+		this.table = this._register(new Table(tableContainer, { dataProvider: this.dataProvider, columns: this.columns }, tableOptions));
 		this.table.setTableTitle(localize('resultsGrid', "Results grid"));
 		this.table.setSelectionModel(this.selectionModel);
 		this.table.registerPlugin(new MouseWheelSupport());
@@ -485,14 +472,12 @@ export abstract class GridTableBase<T> extends Disposable implements IView {
 		this.table.registerPlugin(new AdditionalKeyBindings());
 		this._register(this.table.onContextMenu(this.contextMenu, this));
 		this._register(this.table.onClick(this.onTableClick, this));
-		//This listener is used for correcting auto-scroling when clicking on the header for reszing.
-		this._register(this.table.onHeaderClick(this.onHeaderClick, this));
 
 		if (this.styles) {
 			this.table.style(this.styles);
 		}
 		// If the actionsOrientation passed in is "VERTICAL" (or no actionsOrientation is passed in at all), create a vertical actionBar
-		if (this.options.actionOrientation === ActionsOrientation.VERTICAL) {
+		if (actionsOrientation === ActionsOrientation.VERTICAL) {
 			actionBarContainer.className = 'grid-panel action-bar vertical';
 			actionBarContainer.style.width = ACTIONBAR_WIDTH + 'px';
 			this.container.appendChild(actionBarContainer);
@@ -505,7 +490,7 @@ export abstract class GridTableBase<T> extends Disposable implements IView {
 			resultId: this.resultSet.id
 		};
 		this.actionBar = new ActionBar(actionBarContainer, {
-			orientation: this.options.actionOrientation, context: context
+			orientation: actionsOrientation, context: context
 		});
 		// update context before we run an action
 		this.selectionModel.onSelectedRangesChanged.subscribe(e => {
@@ -585,29 +570,24 @@ export abstract class GridTableBase<T> extends Disposable implements IView {
 		this._state = val;
 	}
 
-	private onHeaderClick(event: ITableMouseEvent) {
-		//header clicks must be accounted for as they force the table to scroll to the top;
-		this.scrolled = false;
-	}
-
 	private onTableClick(event: ITableMouseEvent) {
 		// account for not having the number column
 		let column = this.resultSet.columnInfo[event.cell.cell - 1];
 		// handle if a showplan link was clicked
 		if (column && (column.isXml || column.isJson)) {
 			this.gridDataProvider.getRowData(event.cell.row, 1).then(async d => {
-				let value = d.rows[0][event.cell.cell - 1];
+				let value = d.resultSubset.rows[0][event.cell.cell - 1];
 				let content = value.displayValue;
 
-				const input = this.untitledEditorService.create({ mode: column.isXml ? 'xml' : 'json', initialValue: content });
-				await input.load();
-				await this.instantiationService.invokeFunction(formatDocumentWithSelectedProvider, input.textEditorModel, FormattingMode.Explicit, Progress.None, CancellationToken.None);
+				const input = this.untitledEditorService.createOrGet(undefined, column.isXml ? 'xml' : 'json', content);
+				const model = await input.resolve();
+				await this.instantiationService.invokeFunction(formatDocumentWithSelectedProvider, model.textEditorModel, FormattingMode.Explicit, CancellationToken.None);
 				return this.editorService.openEditor(input);
 			});
 		}
 	}
 
-	public updateResult(resultSet: ResultSetSummary) {
+	public updateResult(resultSet: azdata.ResultSetSummary) {
 		this._resultSet = resultSet;
 		if (this.table && this.visible) {
 			this.dataProvider.length = resultSet.rowCount;
@@ -639,7 +619,10 @@ export abstract class GridTableBase<T> extends Disposable implements IView {
 	protected abstract getContextActions(): IAction[];
 
 	// The actionsOrientation passed in controls the actionBar orientation
-	public layout(size?: number): void {
+	public layout(size?: number, orientation?: Orientation, actionsOrientation?: ActionsOrientation): void {
+		if (!this.table) {
+			this.build(actionsOrientation);
+		}
 		if (!size) {
 			size = this.currentHeight;
 		} else {
@@ -661,10 +644,10 @@ export abstract class GridTableBase<T> extends Disposable implements IView {
 
 	private loadData(offset: number, count: number): Thenable<T[]> {
 		return this.gridDataProvider.getRowData(offset, count).then(response => {
-			if (!response) {
+			if (!response.resultSubset) {
 				return [];
 			}
-			return response.rows.map(r => {
+			return response.resultSubset.rows.map(r => {
 				let dataWithSchema = {};
 				// skip the first column since its a number column
 				for (let i = 1; i < this.columns.length; i++) {
@@ -762,16 +745,16 @@ class GridTable<T> extends GridTableBase<T> {
 	private _gridDataProvider: IGridDataProvider;
 	constructor(
 		private _runner: QueryRunner,
-		resultSet: ResultSetSummary,
+		resultSet: azdata.ResultSetSummary,
 		state: GridTableState,
 		@IContextMenuService contextMenuService: IContextMenuService,
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IContextKeyService private contextKeyService: IContextKeyService,
 		@IEditorService editorService: IEditorService,
-		@IUntitledTextEditorService untitledEditorService: IUntitledTextEditorService,
+		@IUntitledEditorService untitledEditorService: IUntitledEditorService,
 		@IConfigurationService configurationService: IConfigurationService
 	) {
-		super(state, resultSet, undefined, contextMenuService, instantiationService, editorService, untitledEditorService, configurationService);
+		super(state, resultSet, contextMenuService, instantiationService, editorService, untitledEditorService, configurationService);
 		this._gridDataProvider = this.instantiationService.createInstance(QueryGridDataProvider, this._runner, resultSet.batchId, resultSet.id);
 	}
 

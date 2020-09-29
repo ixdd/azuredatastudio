@@ -39,6 +39,7 @@ import { Constants } from 'vs/base/common/uint';
 import { CLOSE_EDITORS_AND_GROUP_COMMAND_ID } from 'vs/workbench/browser/parts/editor/editorCommands';
 import { coalesce } from 'vs/base/common/arrays';
 import { ExplorerItem, NewExplorerItem } from 'vs/workbench/contrib/files/common/explorerModel';
+<<<<<<< HEAD
 import { getErrorMessage } from 'vs/base/common/errors';
 import { triggerDownload, asDomUri } from 'vs/base/browser/dom';
 import { mnemonicButtonLabel } from 'vs/base/common/labels';
@@ -49,6 +50,12 @@ import { IWorkingCopyFileService } from 'vs/workbench/services/workingCopy/commo
 import { once } from 'vs/base/common/functional';
 import { Codicon } from 'vs/base/common/codicons';
 import { IViewsService } from 'vs/workbench/common/views';
+=======
+import { onUnexpectedError, getErrorMessage } from 'vs/base/common/errors';
+
+// {{SQL CARBON EDIT}}
+import { openNewQuery } from 'sql/workbench/contrib/query/browser/queryActions';
+>>>>>>> origin/workbenchlinting
 
 export const NEW_FILE_COMMAND_ID = 'explorer.newFile';
 export const NEW_FILE_LABEL = nls.localize('newFile', "New File");

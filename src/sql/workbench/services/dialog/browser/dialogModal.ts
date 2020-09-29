@@ -5,10 +5,12 @@
 
 import 'vs/css!./media/dialogModal';
 import { Modal, IModalOptions } from 'sql/workbench/browser/modal/modal';
+import { attachModalDialogStyler } from 'sql/platform/theme/common/styler';
 import { Dialog, DialogButton } from 'sql/workbench/services/dialog/common/dialogTypes';
 import { DialogPane } from 'sql/workbench/services/dialog/browser/dialogPane';
 
 import { IWorkbenchThemeService } from 'vs/workbench/services/themes/common/workbenchThemeService';
+import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
 import { attachButtonStyler } from 'vs/platform/theme/common/styler';
 import { Button } from 'vs/base/browser/ui/button/button';
@@ -18,13 +20,10 @@ import { StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { DialogMessage } from 'sql/workbench/api/common/sqlExtHostTypes';
 import { IClipboardService } from 'vs/platform/clipboard/common/clipboardService';
+import { IWorkbenchLayoutService } from 'vs/workbench/services/layout/browser/layoutService';
 import { append, $ } from 'vs/base/browser/dom';
 import { ILogService } from 'vs/platform/log/common/log';
-import { ITextResourcePropertiesService } from 'vs/editor/common/services/textResourceConfigurationService';
-import { IAdsTelemetryService } from 'sql/platform/telemetry/common/telemetry';
-import { onUnexpectedError } from 'vs/base/common/errors';
-import { attachModalDialogStyler } from 'sql/workbench/common/styler';
-import { ILayoutService } from 'vs/platform/layout/browser/layoutService';
+import { ITextResourcePropertiesService } from 'vs/editor/common/services/resourceConfiguration';
 
 export class DialogModal extends Modal {
 	private _dialogPane: DialogPane;
@@ -32,15 +31,16 @@ export class DialogModal extends Modal {
 	private _onCancel = new Emitter<void>();
 
 	// Buttons
+	private _cancelButton: Button;
 	private _doneButton: Button;
 
 	constructor(
 		private _dialog: Dialog,
 		name: string,
 		options: IModalOptions,
-		@ILayoutService layoutService: ILayoutService,
+		@IWorkbenchLayoutService layoutService: IWorkbenchLayoutService,
 		@IWorkbenchThemeService themeService: IWorkbenchThemeService,
-		@IAdsTelemetryService telemetryService: IAdsTelemetryService,
+		@ITelemetryService telemetryService: ITelemetryService,
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IClipboardService clipboardService: IClipboardService,
 		@ILogService logService: ILogService,
@@ -75,7 +75,7 @@ export class DialogModal extends Modal {
 		this._dialog.onValidityChanged(valid => {
 			this._doneButton.enabled = valid && this._dialog.okButton.enabled;
 		});
-		this.addDialogButton(this._dialog.cancelButton, () => this.cancel(), false);
+		this._cancelButton = this.addDialogButton(this._dialog.cancelButton, () => this.cancel(), false);
 		this._dialog.cancelButton.registerClickEvent(this._onCancel.event);
 
 		let messageChangeHandler = (message: DialogMessage) => {
@@ -132,7 +132,7 @@ export class DialogModal extends Modal {
 			if (await this._dialog.validateClose()) {
 				this._onDone.fire();
 				this.dispose();
-				this.hide('close');
+				this.hide();
 			}
 			clearTimeout(buttonSpinnerHandler);
 			this._doneButton.element.classList.remove('validating');
@@ -143,21 +143,29 @@ export class DialogModal extends Modal {
 	public cancel(): void {
 		this._onCancel.fire();
 		this.dispose();
-		this.hide('cancel');
+		this.hide();
+	}
+
+	protected hide(): void {
+		super.hide();
+	}
+
+	protected show(): void {
+		super.show();
 	}
 
 	/**
 	 * Overridable to change behavior of escape key
 	 */
-	protected onClose(e: StandardKeyboardEvent): void {
+	protected onClose(e: StandardKeyboardEvent) {
 		this.cancel();
 	}
 
 	/**
 	 * Overridable to change behavior of enter key
 	 */
-	protected onAccept(e: StandardKeyboardEvent): void {
-		this.done().catch(err => onUnexpectedError(err));
+	protected onAccept(e: StandardKeyboardEvent) {
+		this.done();
 	}
 
 	public dispose(): void {

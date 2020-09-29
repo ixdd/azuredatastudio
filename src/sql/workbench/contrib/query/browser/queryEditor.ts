@@ -6,9 +6,8 @@
 import 'vs/css!./media/queryEditor';
 
 import * as DOM from 'vs/base/browser/dom';
-import * as path from 'vs/base/common/path';
-import { EditorOptions, IEditorControl, IEditorMemento, IEditorOpenContext } from 'vs/workbench/common/editor';
-import { EditorPane, EditorMemento } from 'vs/workbench/browser/parts/editor/editorPane';
+import { EditorOptions, IEditorControl, IEditorMemento, IEditorCloseEvent } from 'vs/workbench/common/editor';
+import { BaseEditor, EditorMemento } from 'vs/workbench/browser/parts/editor/baseEditor';
 import { Orientation } from 'vs/base/browser/ui/sash/sash';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
@@ -24,21 +23,19 @@ import { IEditorGroup, IEditorGroupsService } from 'vs/workbench/services/editor
 import { SplitView, Sizing } from 'vs/base/browser/ui/splitview/splitview';
 import { Event } from 'vs/base/common/event';
 import { DisposableStore } from 'vs/base/common/lifecycle';
-import { IActionViewItem, IAction } from 'vs/base/common/actions';
+import { ISelectionData } from 'azdata';
+import { Action, IActionViewItem } from 'vs/base/common/actions';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { BaseTextEditor } from 'vs/workbench/browser/parts/editor/textEditor';
 import { FileEditorInput } from 'vs/workbench/contrib/files/common/editors/fileEditorInput';
 import { URI } from 'vs/base/common/uri';
 import { IFileService, FileChangesEvent } from 'vs/platform/files/common/files';
-import { IConnectionManagementService } from 'sql/platform/connection/common/connectionManagement';
-import { IModeService } from 'vs/editor/common/services/modeService';
-import { QueryEditorInput, IQueryEditorStateChange } from 'sql/workbench/common/editor/query/queryEditorInput';
+
+import { QueryInput, IQueryEditorStateChange } from 'sql/workbench/contrib/query/common/queryInput';
 import { QueryResultsEditor } from 'sql/workbench/contrib/query/browser/queryResultsEditor';
 import * as queryContext from 'sql/workbench/contrib/query/common/queryContext';
 import { Taskbar, ITaskbarContent } from 'sql/base/browser/ui/taskbar/taskbar';
 import * as actions from 'sql/workbench/contrib/query/browser/queryActions';
-import { IRange } from 'vs/editor/common/core/range';
-import { UntitledQueryEditorInput } from 'sql/workbench/common/editor/query/untitledQueryEditorInput';
 
 const QUERY_EDITOR_VIEW_STATE_PREFERENCE_KEY = 'queryEditorViewState';
 
@@ -50,7 +47,7 @@ interface IQueryEditorViewState {
  * Editor that hosts 2 sub-editors: A TextResourceEditor for SQL file editing, and a QueryResultsEditor
  * for viewing and editing query results. This editor is based off SideBySideEditor.
  */
-export class QueryEditor extends EditorPane {
+export class QueryEditor extends BaseEditor {
 
 	public static ID: string = 'workbench.editor.queryEditor';
 
@@ -89,7 +86,6 @@ export class QueryEditor extends EditorPane {
 	private _actualQueryPlanAction: actions.ActualQueryPlanAction;
 	private _listDatabasesActionItem: actions.ListDatabasesActionItem;
 	private _toggleSqlcmdMode: actions.ToggleSqlCmdModeAction;
-	private _exportAsNotebookAction: actions.ExportAsNotebookAction;
 
 	constructor(
 		@ITelemetryService telemetryService: ITelemetryService,
@@ -98,11 +94,9 @@ export class QueryEditor extends EditorPane {
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IEditorGroupsService editorGroupService: IEditorGroupsService,
 		@IFileService fileService: IFileService,
-		@IConnectionManagementService private readonly connectionManagementService: IConnectionManagementService,
 		@IEditorService private readonly editorService: IEditorService,
 		@IInstantiationService private readonly instantiationService: IInstantiationService,
-		@IConfigurationService private readonly configurationService: IConfigurationService,
-		@IModeService private readonly modeService: IModeService,
+		@IConfigurationService private readonly configurationService: IConfigurationService
 	) {
 		super(QueryEditor.ID, telemetryService, themeService, storageService);
 
@@ -111,7 +105,7 @@ export class QueryEditor extends EditorPane {
 		this.queryEditorVisible = queryContext.QueryEditorVisibleContext.bindTo(contextKeyService);
 
 		// Clear view state for deleted files
-		this._register(fileService.onDidFilesChange(e => this.onFilesChanged(e)));
+		this._register(fileService.onFileChanges(e => this.onFilesChanged(e)));
 	}
 
 	private onFilesChanged(e: FileChangesEvent): void {
@@ -126,8 +120,8 @@ export class QueryEditor extends EditorPane {
 	}
 
 	// PUBLIC METHODS ////////////////////////////////////////////////////////////
-	public get input(): QueryEditorInput | null {
-		return this._input as QueryEditorInput;
+	public get input(): QueryInput | null {
+		return this._input as QueryInput;
 	}
 
 	/**
@@ -177,7 +171,7 @@ export class QueryEditor extends EditorPane {
 		// Create QueryTaskbar
 		let taskbarContainer = DOM.append(parentElement, DOM.$('div'));
 		this.taskbar = this._register(new Taskbar(taskbarContainer, {
-			actionViewItemProvider: action => this._getActionItemForAction(action),
+			actionViewItemProvider: (action: Action) => this._getActionItemForAction(action),
 		}));
 
 		// Create Actions for the toolbar
@@ -189,10 +183,11 @@ export class QueryEditor extends EditorPane {
 		this._estimatedQueryPlanAction = this.instantiationService.createInstance(actions.EstimatedQueryPlanAction, this);
 		this._actualQueryPlanAction = this.instantiationService.createInstance(actions.ActualQueryPlanAction, this);
 		this._toggleSqlcmdMode = this.instantiationService.createInstance(actions.ToggleSqlCmdModeAction, this, false);
-		this._exportAsNotebookAction = this.instantiationService.createInstance(actions.ExportAsNotebookAction, this);
+
 		this.setTaskbarContent();
+
 		this._register(this.configurationService.onDidChangeConfiguration(e => {
-			if (e.affectsConfiguration('workbench.enablePreviewFeatures')) {
+			if (e.affectedKeys.includes('workbench.enablePreviewFeatures')) {
 				this.setTaskbarContent();
 			}
 		}));
@@ -205,7 +200,6 @@ export class QueryEditor extends EditorPane {
 		if (stateChangeEvent.connectedChange) {
 			this._toggleConnectDatabaseAction.connected = this.input.state.connected;
 			this._changeConnectionAction.enabled = this.input.state.connected;
-			this.setTaskbarContent();
 			if (this.input.state.connected) {
 				this.listDatabasesActionItem.onConnected();
 			} else {
@@ -242,7 +236,7 @@ export class QueryEditor extends EditorPane {
 	 * Gets the IActionItem for the List Databases dropdown if provided the associated Action.
 	 * Otherwise returns null.
 	 */
-	private _getActionItemForAction(action: IAction): IActionViewItem {
+	private _getActionItemForAction(action: Action): IActionViewItem {
 		if (action.id === actions.ListDatabasesAction.ID) {
 			return this.listDatabasesActionItem;
 		}
@@ -260,67 +254,31 @@ export class QueryEditor extends EditorPane {
 
 	private setTaskbarContent(): void {
 		// Create HTML Elements for the taskbar
-		const separator = Taskbar.createTaskbarSeparator();
-		let content: ITaskbarContent[];
-		const previewFeaturesEnabled = this.configurationService.getValue('workbench')['enablePreviewFeatures'];
-		let connectionProfile = this.connectionManagementService.getConnectionProfile(this.input?.uri);
-		let fileExtension = path.extname(this.input?.uri || '');
+		let separator = Taskbar.createTaskbarSeparator();
 
-		// TODO: Make it more generic, some way for extensions to register the commands it supports
-		if ((!fileExtension && connectionProfile?.providerName === 'KUSTO') || this.modeService.getExtensions('Kusto').indexOf(fileExtension) > -1) {
-			if (this.input instanceof UntitledQueryEditorInput) {		// Sets proper language mode for untitled query editor based on the connection selected by user.
-				this.input.setMode('kusto');
-			}
+		// Set the content in the order we desire
+		let content: ITaskbarContent[] = [
+			{ action: this._runQueryAction },
+			{ action: this._cancelQueryAction },
+			{ element: separator },
+			{ action: this._toggleConnectDatabaseAction },
+			{ action: this._changeConnectionAction },
+			{ action: this._listDatabasesAction },
+			{ element: separator },
+			{ action: this._estimatedQueryPlanAction },
+			{ action: this._toggleSqlcmdMode }
+		];
 
-			content = [
-				{ action: this._runQueryAction },
-				{ action: this._cancelQueryAction },
-				{ element: separator },
-				{ action: this._toggleConnectDatabaseAction },
-				{ action: this._changeConnectionAction },
-				{ action: this._listDatabasesAction }
-			];
-		}
-		else {
-			const notebookConvertActionsEnabled = this.configurationService.getValue('notebook')['showNotebookConvertActions'];
-			if (previewFeaturesEnabled) {
-				content = [
-					{ action: this._runQueryAction },
-					{ action: this._cancelQueryAction },
-					{ element: separator },
-					{ action: this._toggleConnectDatabaseAction },
-					{ action: this._changeConnectionAction },
-					{ action: this._listDatabasesAction },
-					{ element: separator },
-					{ action: this._estimatedQueryPlanAction }, // Preview
-					{ action: this._toggleSqlcmdMode }, // Preview
-				];
-
-				if (notebookConvertActionsEnabled) {
-					content.push({ action: this._exportAsNotebookAction });
-				}
-			} else {
-				content = [
-					{ action: this._runQueryAction },
-					{ action: this._cancelQueryAction },
-					{ element: separator },
-					{ action: this._toggleConnectDatabaseAction },
-					{ action: this._changeConnectionAction },
-					{ action: this._listDatabasesAction }
-				];
-				const notebookConvertActionsEnabled = this.configurationService.getValue('notebook')['notebook.showNotebookConvertActions'];
-				if (notebookConvertActionsEnabled) {
-					content.push(
-						{ element: separator },
-						{ action: this._exportAsNotebookAction });
-				}
-			}
+		// Remove the estimated query plan action if preview features are not enabled
+		let previewFeaturesEnabled = this.configurationService.getValue('workbench')['enablePreviewFeatures'];
+		if (!previewFeaturesEnabled) {
+			content = content.slice(0, -2);
 		}
 
 		this.taskbar.setContent(content);
 	}
 
-	public async setInput(newInput: QueryEditorInput, options: EditorOptions, context: IEditorOpenContext, token: CancellationToken): Promise<void> {
+	public async setInput(newInput: QueryInput, options: EditorOptions, token: CancellationToken): Promise<void> {
 		const oldInput = this.input;
 
 		if (newInput.matches(oldInput)) {
@@ -335,7 +293,7 @@ export class QueryEditor extends EditorPane {
 		}
 
 		// If we're switching editor types switch out the views
-		const newTextEditor = newInput.text instanceof FileEditorInput ? this.textFileEditor : this.textResourceEditor;
+		const newTextEditor = newInput.sql instanceof FileEditorInput ? this.textFileEditor : this.textResourceEditor;
 		if (newTextEditor !== this.currentTextEditor) {
 			this.currentTextEditor = newTextEditor;
 			this.splitview.removeView(0, Sizing.Distribute);
@@ -350,30 +308,30 @@ export class QueryEditor extends EditorPane {
 		}
 
 		await Promise.all([
-			super.setInput(newInput, options, context, token),
-			this.currentTextEditor.setInput(newInput.text, options, context, token),
-			this.resultsEditor.setInput(newInput.results, options, context)
+			super.setInput(newInput, options, token),
+			this.currentTextEditor.setInput(newInput.sql, options, token),
+			this.resultsEditor.setInput(newInput.results, options)
 		]);
 
 		this.inputDisposables.clear();
 		this.inputDisposables.add(this.input.state.onChange(c => this.updateState(c)));
 		this.updateState({ connectingChange: true, connectedChange: true, executingChange: true, resultsVisibleChange: true, sqlCmdModeChanged: true });
 
-		const editorViewState = this.loadTextEditorViewState(this.input.resource);
+		const editorViewState = this.loadTextEditorViewState(this.input.getResource());
 
 		if (editorViewState && editorViewState.resultsHeight && this.splitview.length > 1) {
 			this.splitview.resizeView(1, editorViewState.resultsHeight);
 		}
 	}
 
-	private saveQueryEditorViewState(input: QueryEditorInput): void {
+	private saveQueryEditorViewState(input: QueryInput): void {
 		if (!input) {
 			return; // ensure we have an input to handle view state for
 		}
 
 		// Otherwise we save the view state to restore it later
 		else if (!input.isDisposed()) {
-			this.saveTextEditorViewState(input.resource);
+			this.saveTextEditorViewState(input.getResource());
 		}
 	}
 
@@ -436,7 +394,7 @@ export class QueryEditor extends EditorPane {
 			let visible = currentEditorIsVisible;
 			if (!currentEditorIsVisible) {
 				// Current editor is closing but still tracked as visible. Check if any other editor is visible
-				const candidates = [...this.editorService.visibleEditorPanes].filter(e => {
+				const candidates = [...this.editorService.visibleControls].filter(e => {
 					if (e && e.getId) {
 						return e.getId() === QueryEditor.ID;
 					}
@@ -541,7 +499,7 @@ export class QueryEditor extends EditorPane {
 	 * Returns the underlying SQL editor's text selection in a 0-indexed format. Returns undefined if there
 	 * is no selected text.
 	 */
-	public getSelection(checkIfRange: boolean = true): IRange {
+	public getSelection(checkIfRange: boolean = true): ISelectionData {
 		if (this.currentTextEditor && this.currentTextEditor.getControl()) {
 			let vscodeSelection = this.currentTextEditor.getControl().getSelection();
 
@@ -550,7 +508,13 @@ export class QueryEditor extends EditorPane {
 				!(vscodeSelection.getStartPosition().lineNumber === vscodeSelection.getEndPosition().lineNumber &&
 					vscodeSelection.getStartPosition().column === vscodeSelection.getEndPosition().column);
 			if (!checkIfRange || isRange) {
-				return vscodeSelection;
+				let sqlToolsServiceSelection: ISelectionData = {
+					startLine: vscodeSelection.getStartPosition().lineNumber - 1,
+					startColumn: vscodeSelection.getStartPosition().column - 1,
+					endLine: vscodeSelection.getEndPosition().lineNumber - 1,
+					endColumn: vscodeSelection.getEndPosition().column - 1,
+				};
+				return sqlToolsServiceSelection;
 			}
 		}
 
@@ -558,7 +522,7 @@ export class QueryEditor extends EditorPane {
 		return undefined;
 	}
 
-	public getAllSelection(): IRange {
+	public getAllSelection(): ISelectionData {
 		if (this.currentTextEditor && this.currentTextEditor.getControl()) {
 			let control = this.currentTextEditor.getControl();
 			let codeEditor: ICodeEditor = <ICodeEditor>control;
@@ -566,12 +530,13 @@ export class QueryEditor extends EditorPane {
 				let model = codeEditor.getModel();
 				let totalLines = model.getLineCount();
 				let endColumn = model.getLineMaxColumn(totalLines);
-				return {
-					startLineNumber: 1,
-					startColumn: 1,
-					endLineNumber: totalLines,
-					endColumn: endColumn,
+				let selection: ISelectionData = {
+					startLine: 0,
+					startColumn: 0,
+					endLine: totalLines - 1,
+					endColumn: endColumn - 1,
 				};
+				return selection;
 			}
 		}
 		return undefined;

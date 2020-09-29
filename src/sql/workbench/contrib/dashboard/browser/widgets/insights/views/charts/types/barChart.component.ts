@@ -10,8 +10,9 @@ import { IChartConfig } from 'sql/workbench/contrib/dashboard/browser/widgets/in
 import * as colors from 'vs/platform/theme/common/colorRegistry';
 import { editorLineNumbers } from 'vs/editor/common/view/editorColorRegistry';
 import { ChangeDetectorRef, Inject, forwardRef } from '@angular/core';
-import { IThemeService, IColorTheme } from 'vs/platform/theme/common/themeService';
-import { IAdsTelemetryService } from 'sql/platform/telemetry/common/telemetry';
+import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
+import { IThemeService, ITheme } from 'vs/platform/theme/common/themeService';
+import { ILogService } from 'vs/platform/log/common/log';
 import { customMixin } from 'sql/workbench/contrib/charts/browser/interfaces';
 import { ChartType } from 'sql/workbench/contrib/charts/common/interfaces';
 
@@ -30,9 +31,10 @@ export default class BarChart extends ChartInsight {
 	constructor(
 		@Inject(forwardRef(() => ChangeDetectorRef)) _changeRef: ChangeDetectorRef,
 		@Inject(IThemeService) themeService: IThemeService,
-		@Inject(IAdsTelemetryService) telemetryService: IAdsTelemetryService
+		@Inject(ITelemetryService) telemetryService: ITelemetryService,
+		@Inject(ILogService) logService: ILogService
 	) {
-		super(_changeRef, themeService, telemetryService);
+		super(_changeRef, themeService, telemetryService, logService);
 	}
 
 	public setConfig(config: IBarChartConfig): void {
@@ -127,7 +129,7 @@ export default class BarChart extends ChartInsight {
 		super.setConfig(config);
 	}
 
-	protected updateTheme(e: IColorTheme): void {
+	protected updateTheme(e: ITheme): void {
 		super.updateTheme(e);
 		const foregroundColor = e.getColor(colors.editorForeground);
 		const foreground = foregroundColor ? foregroundColor.toString() : null;

@@ -6,14 +6,16 @@
 import 'vs/css!./media/flexbox';
 import 'vs/css!./media/styles';
 
-import { Table } from 'sql/base/browser/ui/table/table';
 import { Subscription, Subject } from 'rxjs/Rx';
-import * as Constants from 'sql/platform/query/common/constants';
-import { IGridInfo, IGridDataSet } from 'sql/workbench/contrib/grid/browser/interfaces';
+import { ElementRef, QueryList, ChangeDetectorRef, ViewChildren } from '@angular/core';
+import { SlickGrid } from 'angular2-slickgrid';
+import * as Constants from 'sql/workbench/contrib/query/common/constants';
+import * as LocalizedConstants from 'sql/workbench/contrib/query/common/localizedConstants';
+import { IGridInfo, IGridDataSet, SaveFormat } from 'sql/workbench/contrib/grid/common/interfaces';
 import * as Utils from 'sql/platform/connection/common/utils';
-import { DataService } from 'sql/workbench/services/query/common/dataService';
-import * as actions from 'sql/workbench/contrib/editData/browser/gridActions';
-import * as GridContentEvents from 'sql/workbench/services/query/common/gridContentEvents';
+import { DataService } from 'sql/workbench/contrib/grid/common/dataService';
+import * as actions from 'sql/workbench/contrib/editData/common/gridActions';
+import * as GridContentEvents from 'sql/workbench/contrib/grid/common/gridContentEvents';
 import { ResultsVisibleContext, ResultsGridFocussedContext, ResultsMessagesFocussedContext, QueryEditorVisibleContext } from 'sql/workbench/contrib/query/common/queryContext';
 import { IQueryEditorService } from 'sql/workbench/services/queryEditor/common/queryEditorService';
 import { CellSelectionModel } from 'sql/base/browser/ui/table/plugins/cellSelectionModel.plugin';
@@ -23,23 +25,22 @@ import { ResolvedKeybinding } from 'vs/base/common/keyCodes';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IContextKeyService, IContextKey } from 'vs/platform/contextkey/common/contextkey';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
-import { DisposableStore, Disposable } from 'vs/base/common/lifecycle';
+import { DisposableStore } from 'vs/base/common/lifecycle';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IClipboardService } from 'vs/platform/clipboard/common/clipboardService';
 import { StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { ILogService } from 'vs/platform/log/common/log';
 import { subscriptionToDisposable } from 'sql/base/browser/lifecycle';
-import { SaveFormat } from 'sql/workbench/services/query/common/resultSerializer';
 
-
-export abstract class GridParentComponent extends Disposable {
+export abstract class GridParentComponent {
 	// CONSTANTS
 	// tslint:disable:no-unused-variable
 
 	protected get selectionModel() { return new CellSelectionModel(); }
-	protected rowHeight = 29;
-	protected defaultNumShowingRows = 8;
+	protected _rowHeight = 29;
+	protected _defaultNumShowingRows = 8;
 	protected Constants = Constants;
+	protected LocalizedConstants = LocalizedConstants;
 	protected Utils = Utils;
 	// tslint:disable-next-line:no-unused-variable
 	protected startString = new Date().toLocaleTimeString();
@@ -55,6 +56,7 @@ export abstract class GridParentComponent extends Disposable {
 
 	protected toDispose = new DisposableStore();
 
+
 	// Context keys to set when keybindings are available
 	private resultsVisibleContextKey: IContextKey<boolean>;
 	private gridFocussedContextKey: IContextKey<boolean>;
@@ -67,32 +69,34 @@ export abstract class GridParentComponent extends Disposable {
 	// Datasets currently being rendered on the DOM
 	protected renderedDataSets: IGridDataSet[] = this.placeHolderDataSets;
 	protected resultActive = true;
-	protected messageActiveBool = true;
+	protected _messageActive = true;
 	protected activeGrid = 0;
-	protected nativeElement: HTMLElement;
-	protected table: Table<any>;
+
+	@ViewChildren('slickgrid') slickgrids: QueryList<SlickGrid>;
 
 	set messageActive(input: boolean) {
-		this.messageActiveBool = input;
+		this._messageActive = input;
 		if (this.resultActive) {
 			this.resizeGrids();
 		}
+		this._cd.detectChanges();
 	}
 
 	get messageActive(): boolean {
-		return this.messageActiveBool;
+		return this._messageActive;
 	}
 
 	constructor(
-		@IContextMenuService protected contextMenuService: IContextMenuService,
-		@IKeybindingService protected keybindingService: IKeybindingService,
-		@IContextKeyService protected contextKeyService: IContextKeyService,
-		@IConfigurationService protected configurationService: IConfigurationService,
-		@IClipboardService protected clipboardService: IClipboardService,
-		@IQueryEditorService protected queryEditorService: IQueryEditorService,
-		@ILogService protected logService: ILogService
+		protected _el: ElementRef,
+		protected _cd: ChangeDetectorRef,
+		protected contextMenuService: IContextMenuService,
+		protected keybindingService: IKeybindingService,
+		protected contextKeyService: IContextKeyService,
+		protected configurationService: IConfigurationService,
+		protected clipboardService: IClipboardService,
+		protected queryEditorService: IQueryEditorService,
+		protected logService: ILogService
 	) {
-		super();
 	}
 
 	protected baseInit(): void {
@@ -101,13 +105,13 @@ export abstract class GridParentComponent extends Disposable {
 		if (this.configurationService) {
 			let sqlConfig = this.configurationService.getValue('sql');
 			if (sqlConfig) {
-				this.messageActiveBool = sqlConfig['messagesDefaultOpen'];
+				this._messageActive = sqlConfig['messagesDefaultOpen'];
 			}
 		}
-		this.toDispose.add(this.dataService.gridContent(type => {
+		this.subscribeWithDispose(this.dataService.gridContentObserver, (type) => {
 			switch (type) {
 				case GridContentEvents.RefreshContents:
-					self.refreshDatasets();
+					self.refreshResultsets();
 					break;
 				case GridContentEvents.ResizeContents:
 					self.resizeGrids();
@@ -161,7 +165,7 @@ export abstract class GridParentComponent extends Disposable {
 					this.logService.error('Unexpected grid content event type "' + type + '" sent');
 					break;
 			}
-		}));
+		});
 
 		this.bindKeys(this.contextKeyService);
 	}
@@ -180,7 +184,7 @@ export abstract class GridParentComponent extends Disposable {
 			this.queryEditorVisible = QueryEditorVisibleContext.bindTo(contextKeyService);
 			this.queryEditorVisible.set(true);
 
-			let gridContextKeyService = this.contextKeyService.createScoped(this.nativeElement);
+			let gridContextKeyService = this.contextKeyService.createScoped(this._el.nativeElement);
 			this.toDispose.add(gridContextKeyService);
 			this.resultsVisibleContextKey = ResultsVisibleContext.bindTo(gridContextKeyService);
 			this.resultsVisibleContextKey.set(true);
@@ -199,6 +203,7 @@ export abstract class GridParentComponent extends Disposable {
 		if (this.resultActive) {
 			this.resizeGrids();
 		}
+		this._cd.detectChanges();
 	}
 
 	protected toggleMessagePane(): void {
@@ -222,7 +227,7 @@ export abstract class GridParentComponent extends Disposable {
 	}
 
 	protected getSelection(index?: number): Slick.Range[] {
-		let selection = this.table.getSelectedRanges();
+		let selection = this.slickgrids.toArray()[index || this.activeGrid].getSelectedRanges();
 		if (selection) {
 			selection = selection.map(c => { return <Slick.Range>{ fromCell: c.fromCell - 1, toCell: c.toCell - 1, toRow: c.toRow, fromRow: c.fromRow }; });
 			return selection;
@@ -375,33 +380,33 @@ export abstract class GridParentComponent extends Disposable {
 	}
 
 	openContextMenu(event, batchId, resultId, index): void {
-		let grid = this.table.grid;
+		let slick: any = this.slickgrids.toArray()[index];
+		let grid = slick._grid;
+
 		let selection = this.getSelection(index);
 
 		if (selection && selection.length === 0) {
-			let cell = grid.getCellFromEvent(event);
+			let cell = (grid as Slick.Grid<any>).getCellFromEvent(event);
 			selection = [new Slick.Range(cell.row, cell.cell - 1)];
 		}
 
 		let rowIndex = grid.getCellFromEvent(event).row;
-		if (rowIndex !== grid.getDataLength() - 1) {
-			let actionContext: IGridInfo = {
-				batchIndex: batchId,
-				resultSetNumber: resultId,
-				selection: selection,
-				gridIndex: index,
-				rowIndex: rowIndex
-			};
 
-			let anchor = { x: event.pageX + 1, y: event.pageY };
+		let actionContext: IGridInfo = {
+			batchIndex: batchId,
+			resultSetNumber: resultId,
+			selection: selection,
+			gridIndex: index,
+			rowIndex: rowIndex
+		};
 
-			this.contextMenuService.showContextMenu({
-				getAnchor: () => anchor,
-				getActions: () => this.actionProvider.getGridActions(),
-				getKeyBinding: (action) => this._keybindingFor(action),
-				getActionsContext: () => (actionContext)
-			});
-		}
+		let anchor = { x: event.pageX + 1, y: event.pageY };
+		this.contextMenuService.showContextMenu({
+			getAnchor: () => anchor,
+			getActions: () => this.actionProvider.getGridActions(),
+			getKeyBinding: (action) => this._keybindingFor(action),
+			getActionsContext: () => (actionContext)
+		});
 	}
 
 	/**
@@ -414,14 +419,16 @@ export abstract class GridParentComponent extends Disposable {
 		let self = this;
 		return (gridIndex: number) => {
 			self.activeGrid = gridIndex;
-			let grid = self.table;
-			grid.setActiveCell(0, 1);
-			grid.setSelectedRows(true);
+			let grid = self.slickgrids.toArray()[self.activeGrid];
+			grid.setActive();
+			grid.selection = true;
 		};
 	}
 
 	private onSelectAllForActiveGrid(): void {
-		this.table.setSelectedRows(true);
+		if (this.activeGrid >= 0 && this.slickgrids.length > this.activeGrid) {
+			this.slickgrids.toArray()[this.activeGrid].selection = true;
+		}
 	}
 
 	/**
@@ -438,27 +445,29 @@ export abstract class GridParentComponent extends Disposable {
 		}
 		setTimeout(() => {
 			self.resizeGrids();
-			self.table.setActiveCell(0, 1);
+			self.slickgrids.toArray()[0].setActive();
+			self._cd.detectChanges();
 		});
 	}
 
 	abstract onScroll(scrollTop): void;
 
 	protected getResultsElement(): any {
-		return this.nativeElement.querySelector('#results');
+		return this._el.nativeElement.querySelector('#results');
 	}
 	protected getMessagesElement(): any {
-		return this.nativeElement.querySelector('#messages');
+		return this._el.nativeElement.querySelector('#messages');
 	}
 	/**
-	 * Force re-rendering of the results grids. Calling this upon unhide (upon focus) fixes UI
+	 * Force angular to re-render the results grids. Calling this upon unhide (upon focus) fixes UI
 	 * glitches that occur when a QueryRestulsEditor is hidden then unhidden while it is running a query.
-	 * Detect Changes has been moved to editDataGridPanel version of this.
 	 */
-	refreshDatasets(): void {
+	refreshResultsets(): void {
 		let tempRenderedDataSets = this.renderedDataSets;
 		this.renderedDataSets = [];
+		this._cd.detectChanges();
 		this.renderedDataSets = tempRenderedDataSets;
+		this._cd.detectChanges();
 	}
 
 	getSelectedRangeUnderMessages(): Selection {
@@ -470,8 +479,8 @@ export abstract class GridParentComponent extends Disposable {
 	}
 
 	selectAllMessages(): void {
-		let msgEl = this.nativeElement.querySelector('#messages');
-		this.selectElementContents(<HTMLElement>msgEl);
+		let msgEl = this._el.nativeElement.querySelector('#messages');
+		this.selectElementContents(msgEl);
 	}
 
 	selectElementContents(el: HTMLElement): void {
@@ -499,19 +508,13 @@ export abstract class GridParentComponent extends Disposable {
 	protected abstract tryHandleKeyEvent(e: StandardKeyboardEvent): boolean;
 
 	resizeGrids(): void {
+		const self = this;
 		setTimeout(() => {
-			this.onResize();
+			for (let grid of self.renderedDataSets) {
+				grid.resized.emit();
+			}
 		});
 	}
 
-	protected onResize() {
-		this.table?.resizeCanvas();
-	}
-
-	/**
-	 * used to render the native element into the container.
-	 * */
-	public render(container: HTMLElement): void {
-		container.appendChild(this.nativeElement);
-	}
+	// Private Helper Functions ////////////////////////////////////////////////////////////////////////////
 }

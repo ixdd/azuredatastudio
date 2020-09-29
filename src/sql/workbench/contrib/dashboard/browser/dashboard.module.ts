@@ -20,6 +20,8 @@ import { IBootstrapParams, ISelector } from 'sql/workbench/services/bootstrap/co
 import { Registry } from 'vs/platform/registry/common/platform';
 
 /* Telemetry */
+import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
+import * as TelemetryUtils from 'sql/platform/telemetry/common/telemetryUtilities';
 import * as TelemetryKeys from 'sql/platform/telemetry/common/telemetryKeys';
 
 /* Services */
@@ -28,7 +30,7 @@ import { DashboardServiceInterface } from 'sql/workbench/contrib/dashboard/brows
 import { CommonServiceInterface } from 'sql/workbench/services/bootstrap/browser/commonServiceInterface.service';
 
 /* Directives */
-import { ComponentHostDirective } from 'sql/base/browser/componentHost.directive';
+import { ComponentHostDirective } from 'sql/workbench/contrib/dashboard/browser/core/componentHost.directive';
 
 /* Base Components */
 import { DashboardComponent } from 'sql/workbench/contrib/dashboard/browser/dashboard.component';
@@ -56,18 +58,17 @@ import { OperatorsViewComponent } from 'sql/workbench/contrib/jobManagement/brow
 import { ProxiesViewComponent } from 'sql/workbench/contrib/jobManagement/browser/proxiesView.component';
 import { NotebooksViewComponent } from 'sql/workbench/contrib/jobManagement/browser/notebooksView.component';
 import { NotebookHistoryComponent } from 'sql/workbench/contrib/jobManagement/browser/notebookHistory.component';
+import LoadingSpinner from 'sql/workbench/browser/modelComponents/loadingSpinner.component';
 import { Checkbox } from 'sql/base/browser/ui/checkbox/checkbox.component';
 import { SelectBox } from 'sql/platform/browser/selectBox/selectBox.component';
 import { InputBox } from 'sql/platform/browser/inputbox/inputBox.component';
 import { EditableDropDown } from 'sql/platform/browser/editableDropdown/editableDropdown.component';
-import { AsmtViewComponent } from 'sql/workbench/contrib/assessment/browser/asmtView.component';
-import { AsmtResultsViewComponent } from 'sql/workbench/contrib/assessment/browser/asmtResultsView.component';
 
 const baseComponents = [DashboardHomeContainer, DashboardComponent, DashboardWidgetWrapper, DashboardWebviewContainer,
 	DashboardWidgetContainer, DashboardGridContainer, DashboardErrorContainer, DashboardNavSection, ModelViewContent, WebviewContent, WidgetContent,
 	ComponentHostDirective, BreadcrumbComponent, ControlHostContent, DashboardControlHostContainer,
 	JobsViewComponent, NotebooksViewComponent, AgentViewComponent, JobHistoryComponent, NotebookHistoryComponent, JobStepsViewComponent, AlertsViewComponent, ProxiesViewComponent, OperatorsViewComponent,
-	DashboardModelViewContainer, ModelComponentWrapper, Checkbox, EditableDropDown, SelectBox, InputBox, AsmtViewComponent, AsmtResultsViewComponent];
+	DashboardModelViewContainer, ModelComponentWrapper, Checkbox, EditableDropDown, SelectBox, InputBox, LoadingSpinner];
 
 /* Panel */
 import { PanelModule } from 'sql/base/browser/ui/panel/panel.module';
@@ -83,18 +84,18 @@ const pageComponents = [ServerDashboardPage, DatabaseDashboardPage];
 /* Widget Components */
 import { PropertiesWidgetComponent } from 'sql/workbench/contrib/dashboard/browser/widgets/properties/propertiesWidget.component';
 import { ExplorerWidget } from 'sql/workbench/contrib/dashboard/browser/widgets/explorer/explorerWidget.component';
+import { TasksWidget } from 'sql/workbench/contrib/dashboard/browser/widgets/tasks/tasksWidget.component';
 import { InsightsWidget } from 'sql/workbench/contrib/dashboard/browser/widgets/insights/insightsWidget.component';
 import { WebviewWidget } from 'sql/workbench/contrib/dashboard/browser/widgets/webview/webviewWidget.component';
 import { JobStepsViewComponent } from 'sql/workbench/contrib/jobManagement/browser/jobStepsView.component';
 import { IInstantiationService, _util } from 'vs/platform/instantiation/common/instantiation';
-import { IAdsTelemetryService } from 'sql/platform/telemetry/common/telemetry';
-import { PropertiesContainerModule } from 'sql/base/browser/ui/propertiesContainer/propertiesContainer.module';
-import { LoadingSpinnerModule } from 'sql/base/browser/ui/loadingSpinner/loadingSpinner.module';
+import { ILogService } from 'vs/platform/log/common/log';
 
 
 const widgetComponents = [
 	PropertiesWidgetComponent,
 	ExplorerWidget,
+	TasksWidget,
 	InsightsWidget,
 	WebviewWidget
 ];
@@ -143,9 +144,7 @@ export const DashboardModule = (params, selector: string, instantiationService: 
 			ChartsModule,
 			RouterModule.forRoot(appRoutes),
 			PanelModule,
-			ScrollableModule,
-			PropertiesContainerModule,
-			LoadingSpinnerModule
+			ScrollableModule
 		],
 		providers: [
 			{ provide: APP_BASE_HREF, useValue: '/' },
@@ -162,7 +161,8 @@ export const DashboardModule = (params, selector: string, instantiationService: 
 		constructor(
 			@Inject(forwardRef(() => ComponentFactoryResolver)) private _resolver: ComponentFactoryResolver,
 			@Inject(forwardRef(() => Router)) private _router: Router,
-			@Inject(IAdsTelemetryService) private _telemetryService: IAdsTelemetryService,
+			@Inject(ITelemetryService) private telemetryService: ITelemetryService,
+			@Inject(ILogService) private readonly logService: ILogService,
 			@Inject(ISelector) private selector: string
 		) {
 		}
@@ -175,9 +175,9 @@ export const DashboardModule = (params, selector: string, instantiationService: 
 			this._router.events.subscribe(e => {
 				if (e instanceof NavigationEnd) {
 					this.navigations++;
-					this._telemetryService.createActionEvent(TelemetryKeys.TelemetryView.Shell, TelemetryKeys.DashboardNavigated)
-						.withAdditionalProperties({ numberOfNavigations: this.navigations })
-						.send();
+					TelemetryUtils.addTelemetry(this.telemetryService, this.logService, TelemetryKeys.DashboardNavigated, {
+						numberOfNavigations: this.navigations
+					});
 				}
 			});
 		}

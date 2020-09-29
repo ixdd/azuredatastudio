@@ -14,112 +14,61 @@ import { SelectBox, ISelectBoxOptionsWithLabel } from 'sql/base/browser/ui/selec
 import { IConnectionManagementService, ConnectionType } from 'sql/platform/connection/common/connectionManagement';
 import { ICapabilitiesService } from 'sql/platform/capabilities/common/capabilitiesService';
 import { ConnectionProfile } from 'sql/platform/connection/common/connectionProfile';
+import { noKernel } from 'sql/workbench/services/notebook/browser/sessionManager';
 import { IConnectionDialogService } from 'sql/workbench/services/connection/common/connectionDialogService';
-import { NotebookModel } from 'sql/workbench/services/notebook/browser/models/notebookModel';
+import { NotebookModel } from 'sql/workbench/contrib/notebook/browser/models/notebookModel';
+import { generateUri } from 'sql/platform/connection/common/utils';
+import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
+import { ILogService } from 'vs/platform/log/common/log';
 import { ICommandService } from 'vs/platform/commands/common/commands';
-import { CellType } from 'sql/workbench/services/notebook/common/contracts';
+import { CellType } from 'sql/workbench/contrib/notebook/common/models/contracts';
+import { NotebookComponent } from 'sql/workbench/contrib/notebook/browser/notebook.component';
 import { getErrorMessage } from 'vs/base/common/errors';
-import { IEditorAction } from 'vs/editor/common/editorCommon';
-import { IFindNotebookController } from 'sql/workbench/contrib/notebook/browser/find/notebookFindWidget';
-import { INotebookModel } from 'sql/workbench/services/notebook/browser/models/modelInterfaces';
+import { INotebookModel } from 'sql/workbench/contrib/notebook/browser/models/modelInterfaces';
 import { IObjectExplorerService } from 'sql/workbench/services/objectExplorer/browser/objectExplorerService';
-import { TreeUpdateUtils } from 'sql/workbench/services/objectExplorer/browser/treeUpdateUtils';
-import { find, firstIndex } from 'vs/base/common/arrays';
-import { INotebookService } from 'sql/workbench/services/notebook/browser/notebookService';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { CellContext } from 'sql/workbench/contrib/notebook/browser/cellViews/codeActions';
-import { URI } from 'vs/base/common/uri';
+import { TreeUpdateUtils } from 'sql/workbench/contrib/objectExplorer/browser/treeUpdateUtils';
 
 const msgLoading = localize('loading', "Loading kernels...");
-export const msgChanging = localize('changing', "Changing kernel...");
-const attachToLabel: string = localize('AttachTo', "Attach to ");
-const kernelLabel: string = localize('Kernel', "Kernel ");
+const msgChanging = localize('changing', "Changing kernel...");
+const kernelLabel: string = localize('Kernel', "Kernel: ");
+const attachToLabel: string = localize('AttachTo', "Attach To: ");
 const msgLoadingContexts = localize('loadingContexts', "Loading contexts...");
-const msgChangeConnection = localize('changeConnection', "Change Connection");
+const msgAddNewConnection = localize('addNewConnection', "Add New Connection");
 const msgSelectConnection = localize('selectConnection', "Select Connection");
 const msgLocalHost = localize('localhost', "localhost");
-
-export const noKernel: string = localize('noKernel', "No Kernel");
+const HIDE_ICON_CLASS = ' hideIcon';
 
 // Action to add a cell to notebook based on cell type(code/markdown).
 export class AddCellAction extends Action {
 	public cellType: CellType;
 
 	constructor(
-		id: string, label: string, cssClass: string,
-		@INotebookService private _notebookService: INotebookService
+		id: string, label: string, cssClass: string
 	) {
 		super(id, label, cssClass);
 	}
-	public async run(context: URI | CellContext): Promise<void> {
-		let index = 0;
-		if (context instanceof CellContext) {
-			if (context?.model?.cells) {
-				let activeCellId = context.model.activeCell.id;
-				if (activeCellId) {
-					index = context.model.cells.findIndex(cell => cell.id === activeCellId) + 1;
-				}
+	public run(context: NotebookComponent): Promise<boolean> {
+		return new Promise<boolean>((resolve, reject) => {
+			try {
+				context.addCell(this.cellType);
+				resolve(true);
+			} catch (e) {
+				reject(e);
 			}
-			if (context?.model) {
-				context.model.addCell(this.cellType, index);
-			}
-		} else {
-			//Add Cell after current selected cell.
-			const editor = this._notebookService.findNotebookEditor(context);
-			const index = editor.cells?.findIndex(cell => cell.active) ?? 0;
-			editor.addCell(this.cellType, index);
-		}
-	}
-}
-
-export interface ITooltipState {
-	label: string;
-	baseClass: string;
-	iconClass: string;
-	maskedIconClass: string;
-	shouldToggleTooltip?: boolean;
-}
-export abstract class TooltipFromLabelAction extends Action {
-
-	constructor(id: string, protected state: ITooltipState) {
-		super(id, '');
-		this.updateLabelAndIcon();
-	}
-
-	private updateLabelAndIcon() {
-		if (this.state.shouldToggleTooltip) {
-			this.tooltip = this.state.label;
-		} else {
-			this.label = this.state.label;
-		}
-		let classes = this.state.baseClass ? `${this.state.baseClass} ${this.state.iconClass} ` : '';
-		if (this.state.shouldToggleTooltip) {
-			classes += this.state.maskedIconClass;
-		}
-		this.class = classes;
-	}
-}
-// Action to clear outputs of all code cells.
-export class ClearAllOutputsAction extends TooltipFromLabelAction {
-	private static readonly label = localize('clearResults', "Clear Results");
-	private static readonly baseClass = 'notebook-button';
-	private static readonly iconClass = 'icon-clear-results';
-	private static readonly maskedIconClass = 'masked-icon';
-
-	constructor(id: string, toggleTooltip: boolean,
-		@INotebookService private _notebookService: INotebookService) {
-		super(id, {
-			label: ClearAllOutputsAction.label,
-			baseClass: ClearAllOutputsAction.baseClass,
-			iconClass: ClearAllOutputsAction.iconClass,
-			maskedIconClass: ClearAllOutputsAction.maskedIconClass,
-			shouldToggleTooltip: toggleTooltip
 		});
 	}
+}
 
-	public run(context: URI): Promise<boolean> {
-		const editor = this._notebookService.findNotebookEditor(context);
-		return editor.clearAllOutputs();
+
+// Action to clear outputs of all code cells.
+export class ClearAllOutputsAction extends Action {
+	constructor(
+		id: string, label: string, cssClass: string
+	) {
+		super(id, label, cssClass);
+	}
+	public run(context: NotebookComponent): Promise<boolean> {
+		return context.clearAllOutputs();
 	}
 }
 
@@ -130,7 +79,6 @@ export interface IToggleableState {
 	toggleOnLabel: string;
 	toggleOffLabel: string;
 	toggleOffClass: string;
-	maskedIconClass?: string;
 	isOn: boolean;
 }
 
@@ -147,16 +95,7 @@ export abstract class ToggleableAction extends Action {
 		} else {
 			this.label = this.state.isOn ? this.state.toggleOnLabel : this.state.toggleOffLabel;
 		}
-
-		let classes: string = '';
-
-		if (this.state.shouldToggleTooltip && this.state.maskedIconClass) {
-			//mask
-			classes = this.state.baseClass ? `${this.state.baseClass} ${this.state.maskedIconClass} ` : '';
-		} else {
-			//no mask
-			classes = this.state.baseClass ? `${this.state.baseClass} ` : '';
-		}
+		let classes = this.state.baseClass ? `${this.state.baseClass} ` : '';
 		classes += this.state.isOn ? this.state.toggleOnClass : this.state.toggleOffClass;
 		this.class = classes;
 	}
@@ -167,29 +106,120 @@ export abstract class ToggleableAction extends Action {
 	}
 }
 
+
+export interface IActionStateData {
+	className?: string;
+	label?: string;
+	tooltip?: string;
+	hideIcon?: boolean;
+	commandId?: string;
+}
+
+export class IMultiStateData<T> {
+	private _stateMap = new Map<T, IActionStateData>();
+	constructor(mappings: { key: T, value: IActionStateData }[], private _state: T, private _baseClass?: string) {
+		if (mappings) {
+			mappings.forEach(s => this._stateMap.set(s.key, s.value));
+		}
+	}
+
+	public set state(value: T) {
+		if (!this._stateMap.has(value)) {
+			throw new Error('State value must be in stateMap');
+		}
+		this._state = value;
+	}
+
+	public updateStateData(state: T, updater: (data: IActionStateData) => void): void {
+		let data = this._stateMap.get(state);
+		if (data) {
+			updater(data);
+		}
+	}
+
+	public get classes(): string {
+		let classVal = this.getStateValueOrDefault<string>((data) => data.className, '');
+		let classes = this._baseClass ? `${this._baseClass} ` : '';
+		classes += classVal;
+		if (this.getStateValueOrDefault<boolean>((data) => data.hideIcon, false)) {
+			classes += HIDE_ICON_CLASS;
+		}
+		return classes;
+	}
+
+	public get label(): string {
+		return this.getStateValueOrDefault<string>((data) => data.label, '');
+	}
+
+	public get tooltip(): string {
+		return this.getStateValueOrDefault<string>((data) => data.tooltip, '');
+	}
+
+	public get commandId(): string {
+		return this.getStateValueOrDefault<string>((data) => data.commandId, '');
+	}
+
+	private getStateValueOrDefault<U>(getter: (data: IActionStateData) => U, defaultVal?: U): U {
+		let data = this._stateMap.get(this._state);
+		return data ? getter(data) : defaultVal;
+	}
+}
+
+
+export abstract class MultiStateAction<T> extends Action {
+
+	constructor(
+		id: string,
+		protected states: IMultiStateData<T>,
+		private _keybindingService: IKeybindingService,
+		private readonly logService: ILogService) {
+		super(id, '');
+		this.updateLabelAndIcon();
+	}
+
+	private updateLabelAndIcon() {
+		let keyboardShortcut: string;
+		try {
+			// If a keyboard shortcut exists for the command id passed in, append that to the label
+			if (this.states.commandId !== '') {
+				let binding = this._keybindingService.lookupKeybinding(this.states.commandId);
+				keyboardShortcut = binding ? binding.getLabel() : undefined;
+			}
+		} catch (error) {
+			this.logService.error(error);
+		}
+		this.label = this.states.label;
+		this.tooltip = keyboardShortcut ? this.states.tooltip + ` (${keyboardShortcut})` : this.states.tooltip;
+		this.class = this.states.classes;
+	}
+
+	protected updateState(state: T): void {
+		this.states.state = state;
+		this.updateLabelAndIcon();
+	}
+}
+
 export class TrustedAction extends ToggleableAction {
 	// Constants
 	private static readonly trustedLabel = localize('trustLabel', "Trusted");
 	private static readonly notTrustedLabel = localize('untrustLabel', "Not Trusted");
+	private static readonly alreadyTrustedMsg = localize('alreadyTrustedMsg', "Notebook is already trusted.");
 	private static readonly baseClass = 'notebook-button';
-	private static readonly previewTrustedCssClass = 'icon-shield';
 	private static readonly trustedCssClass = 'icon-trusted';
-	private static readonly previewNotTrustedCssClass = 'icon-shield-x';
 	private static readonly notTrustedCssClass = 'icon-notTrusted';
-	private static readonly maskedIconClass = 'masked-icon';
+
+	// Properties
 
 	constructor(
-		id: string, toggleTooltip: boolean,
-		@INotebookService private _notebookService: INotebookService
+		id: string,
+		@INotificationService private _notificationService: INotificationService
 	) {
 		super(id, {
 			baseClass: TrustedAction.baseClass,
 			toggleOnLabel: TrustedAction.trustedLabel,
-			toggleOnClass: toggleTooltip === true ? TrustedAction.previewTrustedCssClass : TrustedAction.trustedCssClass,
+			toggleOnClass: TrustedAction.trustedCssClass,
 			toggleOffLabel: TrustedAction.notTrustedLabel,
-			toggleOffClass: toggleTooltip === true ? TrustedAction.previewNotTrustedCssClass : TrustedAction.notTrustedCssClass,
-			maskedIconClass: TrustedAction.maskedIconClass,
-			shouldToggleTooltip: toggleTooltip,
+			toggleOffClass: TrustedAction.notTrustedCssClass,
 			isOn: false
 		});
 	}
@@ -201,11 +231,23 @@ export class TrustedAction extends ToggleableAction {
 		this.toggle(value);
 	}
 
-	public async run(context: URI): Promise<boolean> {
-		const editor = this._notebookService.findNotebookEditor(context);
-		this.trusted = !this.trusted;
-		editor.model.trustedMode = this.trusted;
-		return true;
+	public run(context: NotebookComponent): Promise<boolean> {
+		let self = this;
+		return new Promise<boolean>((resolve, reject) => {
+			try {
+				if (self.trusted) {
+					const actions: INotificationActions = { primary: [] };
+					self._notificationService.notify({ severity: Severity.Info, message: TrustedAction.alreadyTrustedMsg, actions });
+				}
+				else {
+					self.trusted = !self.trusted;
+					context.model.trustedMode = self.trusted;
+				}
+				resolve(true);
+			} catch (e) {
+				reject(e);
+			}
+		});
 	}
 }
 
@@ -213,15 +255,13 @@ export class TrustedAction extends ToggleableAction {
 export class RunAllCellsAction extends Action {
 	constructor(
 		id: string, label: string, cssClass: string,
-		@INotificationService private notificationService: INotificationService,
-		@INotebookService private _notebookService: INotebookService
+		@INotificationService private notificationService: INotificationService
 	) {
 		super(id, label, cssClass);
 	}
-	public async run(context: URI): Promise<boolean> {
+	public async run(context: NotebookComponent): Promise<boolean> {
 		try {
-			const editor = this._notebookService.findNotebookEditor(context);
-			await editor.runAllCells();
+			await context.runAllCells();
 			return true;
 		} catch (e) {
 			this.notificationService.error(getErrorMessage(e));
@@ -234,53 +274,46 @@ export class CollapseCellsAction extends ToggleableAction {
 	private static readonly collapseCells = localize('collapseAllCells', "Collapse Cells");
 	private static readonly expandCells = localize('expandAllCells', "Expand Cells");
 	private static readonly baseClass = 'notebook-button';
-	private static readonly previewCollapseCssClass = 'icon-collapse-cells';
 	private static readonly collapseCssClass = 'icon-hide-cells';
-	private static readonly previewExpandCssClass = 'icon-expand-cells';
 	private static readonly expandCssClass = 'icon-show-cells';
-	private static readonly maskedIconClass = 'masked-icon';
 
-	constructor(id: string, toggleTooltip: boolean,
-		@INotebookService private _notebookService: INotebookService) {
+	constructor(id: string) {
 		super(id, {
 			baseClass: CollapseCellsAction.baseClass,
 			toggleOnLabel: CollapseCellsAction.expandCells,
-			toggleOnClass: toggleTooltip === true ? CollapseCellsAction.previewExpandCssClass : CollapseCellsAction.expandCssClass,
+			toggleOnClass: CollapseCellsAction.expandCssClass,
 			toggleOffLabel: CollapseCellsAction.collapseCells,
-			toggleOffClass: toggleTooltip === true ? CollapseCellsAction.previewCollapseCssClass : CollapseCellsAction.collapseCssClass,
-			maskedIconClass: CollapseCellsAction.maskedIconClass,
-			shouldToggleTooltip: toggleTooltip,
+			toggleOffClass: CollapseCellsAction.collapseCssClass,
 			isOn: false
 		});
-		this.expanded = true;
 	}
 
 	public get isCollapsed(): boolean {
 		return this.state.isOn;
 	}
-	private setCollapsed(value: boolean) {
+	public set isCollapsed(value: boolean) {
 		this.toggle(value);
-		this.expanded = !value;
 	}
 
-	public async run(context: URI): Promise<boolean> {
-		const editor = this._notebookService.findNotebookEditor(context);
-		this.setCollapsed(!this.isCollapsed);
-		editor.cells.forEach(cell => {
-			cell.isCollapsed = this.isCollapsed;
+	public run(context: NotebookComponent): Promise<boolean> {
+		let self = this;
+		return new Promise<boolean>((resolve, reject) => {
+			try {
+				self.isCollapsed = !self.isCollapsed;
+				context.cells.forEach(cell => {
+					cell.isCollapsed = self.isCollapsed;
+				});
+				resolve(true);
+			} catch (e) {
+				reject(e);
+			}
 		});
-		return true;
 	}
 }
 
-const showAllKernelsConfigName = 'notebook.showAllKernels';
-const workbenchPreviewConfigName = 'workbench.enablePreviewFeatures';
-export const noKernelName = localize('noKernel', "No Kernel");
-
 export class KernelsDropdown extends SelectBox {
 	private model: NotebookModel;
-	private _showAllKernels: boolean = false;
-	constructor(container: HTMLElement, contextViewProvider: IContextViewProvider, modelReady: Promise<INotebookModel>, @IConfigurationService private _configurationService: IConfigurationService) {
+	constructor(container: HTMLElement, contextViewProvider: IContextViewProvider, modelReady: Promise<INotebookModel>) {
 		super([msgLoading], msgLoading, contextViewProvider, container, { labelText: kernelLabel, labelOnTop: false, ariaLabel: kernelLabel } as ISelectBoxOptionsWithLabel);
 
 		if (modelReady) {
@@ -292,53 +325,29 @@ export class KernelsDropdown extends SelectBox {
 		}
 
 		this.onDidSelect(e => this.doChangeKernel(e.selected));
-		this.getAllKernelConfigValue();
-		this._register(this._configurationService.onDidChangeConfiguration(e => {
-			if (e.affectsConfiguration(showAllKernelsConfigName) || e.affectsConfiguration(workbenchPreviewConfigName)) {
-				this.getAllKernelConfigValue();
-			}
-		}));
 	}
 
 	updateModel(model: INotebookModel): void {
 		this.model = model as NotebookModel;
 		this._register(this.model.kernelChanged((changedArgs: azdata.nb.IKernelChangedArgs) => {
-			this.updateKernel(changedArgs.newValue, changedArgs.nbKernelAlias);
+			this.updateKernel(changedArgs.newValue);
 		}));
 		let kernel = this.model.clientSession && this.model.clientSession.kernel;
 		this.updateKernel(kernel);
 	}
 
 	// Update SelectBox values
-	public updateKernel(kernel: azdata.nb.IKernel, nbKernelAlias?: string) {
-		let kernels: string[] = this._showAllKernels ? [...new Set(this.model.specs.kernels.map(a => a.display_name).concat(this.model.standardKernelsDisplayName()))]
-			: this.model.standardKernelsDisplayName();
-		if (this.model.kernelAliases?.length) {
-			for (let x in this.model.kernelAliases) {
-				kernels.splice(1, 0, this.model.kernelAliases[x]);
-			}
-		}
+	public updateKernel(kernel: azdata.nb.IKernel) {
+		let kernels: string[] = this.model.standardKernelsDisplayName();
 		if (kernel && kernel.isReady) {
 			let standardKernel = this.model.getStandardKernelFromName(kernel.name);
-			if (kernels) {
-				let index;
-				if (standardKernel) {
-					index = firstIndex(kernels, kernel => kernel === standardKernel.displayName);
-				} else {
-					let kernelSpec = this.model.specs.kernels.find(k => k.name === kernel.name);
-					index = firstIndex(kernels, k => k === kernelSpec?.display_name);
-				}
-				if (nbKernelAlias) {
-					index = kernels.indexOf(nbKernelAlias);
-				}
-				// This is an error case that should never happen
-				// Just in case, setting index to 0
-				if (index < 0) {
-					index = 0;
-				}
+
+			if (kernels && standardKernel) {
+				let index = kernels.findIndex((kernel => kernel === standardKernel.displayName));
 				this.setOptions(kernels, index);
 			}
 		} else if (this.model.clientSession.isInErrorState) {
+			let noKernelName = localize('noKernel', "No Kernel");
 			kernels.unshift(noKernelName);
 			this.setOptions(kernels, 0);
 		}
@@ -347,10 +356,6 @@ export class KernelsDropdown extends SelectBox {
 	public doChangeKernel(displayName: string): void {
 		this.setOptions([msgChanging], 0);
 		this.model.changeKernel(displayName);
-	}
-
-	private getAllKernelConfigValue(): void {
-		this._showAllKernels = !!this._configurationService.getValue(showAllKernelsConfigName) && !!this._configurationService.getValue(workbenchPreviewConfigName);
 	}
 }
 
@@ -363,22 +368,21 @@ export class AttachToDropdown extends SelectBox {
 		@IConnectionDialogService private _connectionDialogService: IConnectionDialogService,
 		@INotificationService private _notificationService: INotificationService,
 		@ICapabilitiesService private _capabilitiesService: ICapabilitiesService,
+		@ILogService private readonly logService: ILogService
 	) {
 		super([msgLoadingContexts], msgLoadingContexts, contextViewProvider, container, { labelText: attachToLabel, labelOnTop: false, ariaLabel: attachToLabel } as ISelectBoxOptionsWithLabel);
 		if (modelReady) {
 			modelReady
 				.then(model => {
 					this.updateModel(model);
-					this._register(model.onValidConnectionSelected(validConnection => {
-						this.handleContextsChanged(!validConnection);
-					}));
+					this.updateAttachToDropdown(model);
 				})
 				.catch(err => {
 					// No-op for now
 				});
 		}
 		this.onDidSelect(e => {
-			this.doChangeContext();
+			this.doChangeContext(this.getSelectedConnection(e.selected));
 		});
 	}
 
@@ -403,47 +407,123 @@ export class AttachToDropdown extends SelectBox {
 		}
 	}
 
+	private updateAttachToDropdown(model: INotebookModel): void {
+		if (this.model.connectionProfile && this.model.connectionProfile.serverName) {
+			let connectionUri = generateUri(this.model.connectionProfile, 'notebook');
+			this.model.notebookOptions.connectionService.connect(this.model.connectionProfile, connectionUri).then(result => {
+				if (result.connected) {
+					let connectionProfile = new ConnectionProfile(this._capabilitiesService, result.connectionProfile);
+					this.model.addAttachToConnectionsToBeDisposed(connectionUri);
+					this.doChangeContext(connectionProfile);
+				} else {
+					this.openConnectionDialog(true);
+				}
+			}).catch(err =>
+				this.logService.error(err));
+		}
+		this._register(model.onValidConnectionSelected(validConnection => {
+			this.handleContextsChanged(!validConnection);
+		}));
+	}
+
 	private getKernelDisplayName(): string {
 		let kernelDisplayName: string;
 		if (this.model.clientSession && this.model.clientSession.kernel && this.model.clientSession.kernel.name) {
 			let currentKernelName = this.model.clientSession.kernel.name.toLowerCase();
-			let currentKernelSpec = find(this.model.specs.kernels, kernel => kernel.name && kernel.name.toLowerCase() === currentKernelName);
+			let currentKernelSpec = this.model.specs.kernels.find(kernel => kernel.name && kernel.name.toLowerCase() === currentKernelName);
 			if (currentKernelSpec) {
-				//KernelDisplayName should be Kusto when connecting to Kusto connection
-				if ((this.model.context?.serverCapabilities.notebookKernelAlias && this.model.currentKernelAlias === this.model.context?.serverCapabilities.notebookKernelAlias) || (this.model.kernelAliases.includes(this.model.selectedKernelDisplayName) && this.model.selectedKernelDisplayName)) {
-					kernelDisplayName = this.model.context?.serverCapabilities.notebookKernelAlias || this.model.selectedKernelDisplayName;
-				} else {
-					kernelDisplayName = currentKernelSpec.display_name;
-				}
+				kernelDisplayName = currentKernelSpec.display_name;
 			}
 		}
 		return kernelDisplayName;
 	}
 
 	// Load "Attach To" dropdown with the values corresponding to Kernel dropdown
-	public loadAttachToDropdown(model: INotebookModel, currentKernel: string, showSelectConnection?: boolean): void {
+	public async loadAttachToDropdown(model: INotebookModel, currentKernel: string, showSelectConnection?: boolean): Promise<void> {
 		let connProviderIds = this.model.getApplicableConnectionProviderIds(currentKernel);
 		if ((connProviderIds && connProviderIds.length === 0) || currentKernel === noKernel) {
 			this.setOptions([msgLocalHost]);
-		} else {
-			let connections: string[] = model.context && model.context.title && (connProviderIds.includes(this.model.context.providerName)) ? [model.context.title] : [msgSelectConnection];
-			if (!find(connections, x => x === msgChangeConnection)) {
-				connections.push(msgChangeConnection);
-			}
-			this.setOptions(connections, 0);
+		}
+		else {
+			let connections = this.getConnections(model);
 			this.enable();
-
-			if (this.model.kernelAliases.includes(currentKernel) && this.model.selectedKernelDisplayName !== currentKernel) {
-				this.model.changeKernel(currentKernel);
+			if (showSelectConnection) {
+				connections = this.loadWithSelectConnection(connections);
+			}
+			else {
+				if (connections.length === 1 && connections[0] === msgAddNewConnection) {
+					connections.unshift(msgSelectConnection);
+				}
+				else {
+					if (!connections.includes(msgAddNewConnection)) {
+						connections.push(msgAddNewConnection);
+					}
+				}
+				this.setOptions(connections, 0);
 			}
 		}
 	}
 
-	public doChangeContext(connection?: ConnectionProfile, hideErrorMessage?: boolean): void {
-		if (this.value === msgChangeConnection || this.value === msgSelectConnection) {
-			this.openConnectionDialog().catch(err => this._notificationService.error(getErrorMessage(err)));
+	private loadWithSelectConnection(connections: string[]): string[] {
+		if (connections && connections.length > 0) {
+			if (!connections.includes(msgSelectConnection)) {
+				connections.unshift(msgSelectConnection);
+			}
+
+			if (!connections.includes(msgAddNewConnection)) {
+				connections.push(msgAddNewConnection);
+			}
+			this.setOptions(connections, 0);
+		}
+		return connections;
+	}
+
+	//Get connections from context
+	public getConnections(model: INotebookModel): string[] {
+		let otherConnections: ConnectionProfile[] = [];
+		model.contexts.otherConnections.forEach((conn) => { otherConnections.push(conn); });
+		// If current connection connects to master, select the option in the dropdown that doesn't specify a database
+		if (!model.contexts.defaultConnection.databaseName) {
+			this.selectWithOptionName(model.contexts.defaultConnection.serverName);
 		} else {
-			this.model.changeContext(this.value, connection, hideErrorMessage).catch(err => this._notificationService.error(getErrorMessage(err)));
+			if (model.contexts.defaultConnection) {
+				this.selectWithOptionName(model.contexts.defaultConnection.title ? model.contexts.defaultConnection.title : model.contexts.defaultConnection.serverName);
+			} else {
+				this.select(0);
+			}
+		}
+		otherConnections = this.setConnectionsList(model.contexts.defaultConnection, model.contexts.otherConnections);
+		let connections = otherConnections.map((context) => context.title ? context.title : context.serverName);
+		return connections;
+	}
+
+	private setConnectionsList(defaultConnection: ConnectionProfile, otherConnections: ConnectionProfile[]) {
+		if (defaultConnection.serverName !== msgSelectConnection) {
+			otherConnections = otherConnections.filter(conn => conn.id !== defaultConnection.id);
+			otherConnections.unshift(defaultConnection);
+			if (otherConnections.length > 1) {
+				otherConnections = otherConnections.filter(val => val.serverName !== msgSelectConnection);
+			}
+		}
+		return otherConnections;
+	}
+
+	public getSelectedConnection(selection: string): ConnectionProfile {
+		// Find all connections with the the same server as the selected option
+		let connections = this.model.contexts.otherConnections.filter((c) => selection === c.title);
+		// If only one connection exists with the same server name, use that one
+		if (connections.length === 1) {
+			return connections[0];
+		} else {
+			return this.model.contexts.otherConnections.find((c) => selection === c.title);
+		}
+	}
+
+	public doChangeContext(connection?: ConnectionProfile, hideErrorMessage?: boolean): void {
+		if (this.value === msgAddNewConnection) {
+			this.openConnectionDialog();
+		} else {
+			this.model.changeContext(this.value, connection, hideErrorMessage).then(ok => undefined, err => this._notificationService.error(getErrorMessage(err)));
 		}
 	}
 
@@ -455,31 +535,17 @@ export class AttachToDropdown extends SelectBox {
 	 **/
 	public async openConnectionDialog(useProfile: boolean = false): Promise<boolean> {
 		try {
-			// Get all providers to show all available connections in connection dialog
-			let providers = this.model.getApplicableConnectionProviderIds(this.model.clientSession.kernel.name);
-			// Spark kernels are unable to get providers from above, therefore ensure that we get the
-			// correct providers for the selected kernel and load the proper connections for the connection dialog
-			// Example Scenario: Spark Kernels should only have MSSQL connections in connection dialog
-			if (!this.model.kernelAliases.includes(this.model.selectedKernelDisplayName) && this.model.clientSession.kernel.name !== 'SQL') {
-				providers = providers.concat(this.model.getApplicableConnectionProviderIds(this.model.selectedKernelDisplayName));
-			} else {
-				for (let alias of this.model.kernelAliases) {
-					providers = providers.concat(this.model.getApplicableConnectionProviderIds(alias));
-				}
-			}
 			let connection = await this._connectionDialogService.openDialogAndWait(this._connectionManagementService,
 				{
 					connectionType: ConnectionType.temporary,
-					providers: providers
+					providers: this.model.getApplicableConnectionProviderIds(this.model.clientSession.kernel.name)
 				},
 				useProfile ? this.model.connectionProfile : undefined);
 
 			let attachToConnections = this.values;
 			if (!connection) {
-				// If there is no connection, we should choose the previous connection,
-				// which will always be the first item in the list. Either "Select Connection"
-				// or a real connection name
-				this.select(0);
+				this.loadAttachToDropdown(this.model, this.getKernelDisplayName());
+				this.doChangeContext(undefined, true);
 				return false;
 			}
 			let connectionUri = this._connectionManagementService.getConnectionUri(connection);
@@ -497,7 +563,7 @@ export class AttachToDropdown extends SelectBox {
 			//To ignore n/a after we have at least one valid connection
 			attachToConnections = attachToConnections.filter(val => val !== msgSelectConnection);
 
-			let index = firstIndex(attachToConnections, connection => connection === connectedServer);
+			let index = attachToConnections.findIndex((connection => connection === connectedServer));
 			this.setOptions([]);
 			this.setOptions(attachToConnections);
 			if (!index || index < 0 || index >= attachToConnections.length) {
@@ -508,13 +574,6 @@ export class AttachToDropdown extends SelectBox {
 			this.model.addAttachToConnectionsToBeDisposed(connectionUri);
 			// Call doChangeContext to set the newly chosen connection in the model
 			this.doChangeContext(connectionProfile);
-
-			//Changes kernel based on connection attached to
-			if (this.model.kernelAliases.includes(connectionProfile.serverCapabilities.notebookKernelAlias)) {
-				this.model.changeKernel(connectionProfile.serverCapabilities.notebookKernelAlias);
-			} else if (this.model.clientSession.kernel.name === 'SQL') {
-				this.model.changeKernel('SQL');
-			}
 			return true;
 		}
 		catch (error) {
@@ -530,7 +589,7 @@ export class NewNotebookAction extends Action {
 	public static readonly ID = 'notebook.command.new';
 	public static readonly LABEL = localize('newNotebookAction', "New Notebook");
 
-	public static readonly INTERNAL_NEW_NOTEBOOK_CMD_ID = '_notebook.command.new';
+	private static readonly INTERNAL_NEW_NOTEBOOK_CMD_ID = '_notebook.command.new';
 	constructor(
 		id: string,
 		label: string,
@@ -551,36 +610,5 @@ export class NewNotebookAction extends Action {
 		}
 		return this.commandService.executeCommand(NewNotebookAction.INTERNAL_NEW_NOTEBOOK_CMD_ID, { connectionProfile: connProfile });
 	}
-}
 
-export class NotebookFindNextAction implements IEditorAction {
-	public readonly id = 'notebook.findNext';
-	public readonly label = localize('notebook.findNext', "Find Next String");
-	public readonly alias = '';
-
-	constructor(private notebook: IFindNotebookController) { }
-
-	async run(): Promise<void> {
-		await this.notebook.findNext();
-	}
-
-	isSupported(): boolean {
-		return true;
-	}
-}
-
-export class NotebookFindPreviousAction implements IEditorAction {
-	public readonly id = 'notebook.findPrevious';
-	public readonly label = localize('notebook.findPrevious', "Find Previous String");
-	public readonly alias = '';
-
-	constructor(private notebook: IFindNotebookController) { }
-
-	async run(): Promise<void> {
-		await this.notebook.findPrevious();
-	}
-
-	isSupported(): boolean {
-		return true;
-	}
 }

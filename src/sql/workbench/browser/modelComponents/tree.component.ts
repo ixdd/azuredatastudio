@@ -13,6 +13,10 @@ import * as azdata from 'azdata';
 
 import { ComponentBase } from 'sql/workbench/browser/modelComponents/componentBase';
 import { Tree } from 'vs/base/parts/tree/browser/treeImpl';
+<<<<<<< HEAD
+=======
+import { CommonServiceInterface } from 'sql/workbench/services/bootstrap/browser/commonServiceInterface.service';
+>>>>>>> origin/workbenchlinting
 import { TreeComponentRenderer } from 'sql/workbench/browser/modelComponents/treeComponentRenderer';
 import { TreeComponentDataSource } from 'sql/workbench/browser/modelComponents/treeDataSource';
 import { attachListStyler } from 'vs/platform/theme/common/styler';

@@ -6,14 +6,14 @@
 import * as assert from 'assert';
 
 export class EventVerifierSingle<T> {
-	private _eventArgument?: T;
+	private _eventArgument: T;
 	private _eventFired: boolean;
 
 	constructor() {
 		this._eventFired = false;
 	}
 
-	public get eventArgument(): T | undefined {
+	public get eventArgument(): T {
 		return this._eventArgument;
 	}
 
@@ -28,7 +28,7 @@ export class EventVerifierSingle<T> {
 		}
 	}
 
-	public assertFiredWithVerify(argumentVerification: (arg: T | undefined) => void) {
+	public assertFiredWithVerify(argumentVerification: (arg: T) => void) {
 		assert.ok(this._eventFired);
 		argumentVerification(this._eventArgument);
 	}
@@ -64,13 +64,13 @@ export class EventVerifierMultiple<T> {
 	public assertFired(expectedArgument?: T) {
 		assert.ok(this.eventFired);
 		if (expectedArgument) {
-			assert.ok(this._eventArguments.some(x => x === expectedArgument));
+			assert.ok(this._eventArguments.includes(expectedArgument));
 		}
 	}
 
 	public assertNotFired(expectedArgument?: T) {
 		if (expectedArgument) {
-			assert.ok(!this._eventArguments.some(x => x === expectedArgument));
+			assert.ok(!this._eventArguments.includes(expectedArgument));
 		} else {
 			assert.ok(!this.eventFired);
 		}

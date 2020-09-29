@@ -7,11 +7,11 @@ import { IConfigurationRegistry, Extensions, IConfigurationNode } from 'vs/platf
 import { Registry } from 'vs/platform/registry/common/platform';
 import { IJSONSchema } from 'vs/base/common/jsonSchema';
 import { localize } from 'vs/nls';
-import { SERVER_GROUP_CONFIG, SERVER_GROUP_COLORS_CONFIG } from 'sql/workbench/services/serverGroup/common/interfaces';
-import { DefaultServerGroupColor } from 'sql/workbench/services/serverGroup/common/serverGroupViewModel';
 
 const configurationRegistry = Registry.as<IConfigurationRegistry>(Extensions.Configuration);
 
+export const SERVER_GROUP_CONFIG = 'serverGroup';
+export const SERVER_GROUP_COLORS_CONFIG = 'colors';
 export const SERVER_GROUP_AUTOEXPAND_CONFIG = 'autoExpand';
 
 const serverGroupConfig: IConfigurationNode = {
@@ -30,7 +30,7 @@ const serverGroupConfig: IConfigurationNode = {
 				'#98AFC7',
 				'#4452A6',
 				'#6A6599',
-				DefaultServerGroupColor
+				'#515151'
 			]
 		},
 		[SERVER_GROUP_CONFIG + '.' + SERVER_GROUP_AUTOEXPAND_CONFIG]: {
@@ -41,18 +41,4 @@ const serverGroupConfig: IConfigurationNode = {
 	}
 };
 
-const serverTreeConfig: IConfigurationNode = {
-	'id': 'serverTree',
-	'title': 'Server Tree',
-	'type': 'object',
-	'properties': {
-		'serverTree.useAsyncServerTree': {
-			'type': 'boolean',
-			'default': false,
-			'description': localize('serverTree.useAsyncServerTree', "(Preview) Use the new async server tree for the Servers view and Connection Dialog with support for new features such as dynamic node filtering.")
-		}
-	}
-};
-
 configurationRegistry.registerConfiguration(serverGroupConfig);
-configurationRegistry.registerConfiguration(serverTreeConfig);

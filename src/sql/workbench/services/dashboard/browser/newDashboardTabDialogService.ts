@@ -5,7 +5,11 @@
 
 import { INewDashboardTabDialogService } from 'sql/workbench/services/dashboard/browser/newDashboardTabDialog';
 import { NewDashboardTabDialog } from 'sql/workbench/services/dashboard/browser/newDashboardTabDialogImpl';
+<<<<<<< HEAD
 import { IDashboardTab } from 'sql/workbench/services/dashboard/browser/common/interfaces';
+=======
+import { IDashboardTab } from 'sql/workbench/contrib/dashboard/browser/dashboardRegistry';
+>>>>>>> origin/workbenchlinting
 import { IAngularEventingService, AngularEventType } from 'sql/platform/angularEventing/browser/angularEventingService';
 import { IDashboardUITab } from 'sql/workbench/services/dashboard/browser/newDashboardTabViewModel';
 

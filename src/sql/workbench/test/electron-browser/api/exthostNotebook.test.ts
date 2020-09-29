@@ -13,6 +13,10 @@ import { IMainContext } from 'vs/workbench/api/common/extHost.protocol';
 
 import { ExtHostNotebook } from 'sql/workbench/api/common/extHostNotebook';
 import { MainThreadNotebookShape } from 'sql/workbench/api/common/sqlExtHost.protocol';
+<<<<<<< HEAD
+=======
+import * as testUtils from '../../../../base/test/common/async';
+>>>>>>> origin/workbenchlinting
 import { INotebookManagerDetails } from 'sql/workbench/api/common/sqlExtHostTypes';
 import { mssqlProviderName } from 'sql/platform/connection/common/constants';
 

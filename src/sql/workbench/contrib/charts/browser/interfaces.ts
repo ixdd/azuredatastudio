@@ -6,15 +6,14 @@
 import { Dimension } from 'vs/base/browser/dom';
 import { mixin } from 'sql/base/common/objects';
 import * as types from 'vs/base/common/types';
+import { Color } from 'vs/base/common/color';
 import { IInsightOptions, InsightType, ChartType } from 'sql/workbench/contrib/charts/common/interfaces';
-import { IInsightData } from 'sql/platform/dashboard/browser/insightRegistry';
-import { BrandedService } from 'vs/platform/instantiation/common/instantiation';
 
 export interface IPointDataSet {
 	data: Array<{ x: number | string, y: number }>;
 	label?: string;
 	fill: boolean;
-	backgroundColor?: string;
+	backgroundColor?: Color;
 }
 
 export function customMixin(destination: any, source: any, overwrite?: boolean): any {
@@ -34,15 +33,20 @@ export function customMixin(destination: any, source: any, overwrite?: boolean):
 	return destination;
 }
 
+export interface IInsightData {
+	columns: Array<string>;
+	rows: Array<Array<string>>;
+}
+
 export interface IInsight {
 	options: IInsightOptions;
 	data: IInsightData;
 	readonly types: Array<InsightType | ChartType>;
-	layout(dim: Dimension): void;
-	dispose(): void;
+	layout(dim: Dimension);
+	dispose();
 }
 
 export interface IInsightCtor {
-	new <Services extends BrandedService[]>(container: HTMLElement, options: IInsightOptions, ...services: Services): IInsight;
+	new(container: HTMLElement, options: IInsightOptions, ...services: { _serviceBrand: undefined; }[]): IInsight;
 	readonly types: Array<InsightType | ChartType>;
 }

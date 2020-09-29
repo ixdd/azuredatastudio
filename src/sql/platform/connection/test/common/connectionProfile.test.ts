@@ -10,7 +10,10 @@ import * as assert from 'assert';
 import { TestCapabilitiesService } from 'sql/platform/capabilities/test/common/testCapabilitiesService';
 import { mssqlProviderName } from 'sql/platform/connection/common/constants';
 import { ConnectionProviderProperties } from 'sql/platform/capabilities/common/capabilitiesService';
+<<<<<<< HEAD
 import { assign } from 'vs/base/common/objects';
+=======
+>>>>>>> origin/workbenchlinting
 
 suite('SQL ConnectionProfileInfo tests', () => {
 	let msSQLCapabilities: ConnectionProviderProperties;

@@ -15,19 +15,14 @@ import { IAngularEventingService } from 'sql/platform/angularEventing/browser/an
 
 import * as colors from 'vs/platform/theme/common/colorRegistry';
 import * as nls from 'vs/nls';
+import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { INotificationService } from 'vs/platform/notification/common/notification';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { ILogService } from 'vs/platform/log/common/log';
-import { ICommandService } from 'vs/platform/commands/common/commands';
-import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
-import { IMenuService } from 'vs/platform/actions/common/actions';
-import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
-import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
-import { IWorkbenchThemeService } from 'vs/workbench/services/themes/common/workbenchThemeService';
 
 export class DatabaseDashboardPage extends DashboardPage implements OnInit {
 	protected propertiesWidget: WidgetConfig = {
-		name: nls.localize('databasePageName', "Database Properties"),
+		name: nls.localize('databasePageName', "DATABASE DASHBOARD"),
 		widget: {
 			'properties-widget': undefined
 		},
@@ -35,7 +30,7 @@ export class DatabaseDashboardPage extends DashboardPage implements OnInit {
 		background_color: colors.editorBackground,
 		border: 'none',
 		fontSize: '14px',
-		padding: '2px 0 0 0',
+		padding: '5px 0 0 0',
 		provider: undefined,
 		edition: undefined
 	};
@@ -47,18 +42,13 @@ export class DatabaseDashboardPage extends DashboardPage implements OnInit {
 		@Inject(forwardRef(() => CommonServiceInterface)) dashboardService: DashboardServiceInterface,
 		@Inject(forwardRef(() => ChangeDetectorRef)) _cd: ChangeDetectorRef,
 		@Inject(forwardRef(() => ElementRef)) el: ElementRef,
+		@Inject(IInstantiationService) instantiationService: IInstantiationService,
 		@Inject(INotificationService) notificationService: INotificationService,
 		@Inject(IAngularEventingService) angularEventingService: IAngularEventingService,
 		@Inject(IConfigurationService) configurationService: IConfigurationService,
-		@Inject(ILogService) logService: ILogService,
-		@Inject(ICommandService) commandService: ICommandService,
-		@Inject(IContextKeyService) contextKeyService: IContextKeyService,
-		@Inject(IMenuService) menuService: IMenuService,
-		@Inject(IKeybindingService) keybindingService: IKeybindingService,
-		@Inject(IContextMenuService) contextMenuService: IContextMenuService,
-		@Inject(IWorkbenchThemeService) themeService: IWorkbenchThemeService
+		@Inject(ILogService) logService: ILogService
 	) {
-		super(dashboardService, el, _cd, notificationService, angularEventingService, configurationService, logService, commandService, contextKeyService, menuService, keybindingService, contextMenuService, themeService);
+		super(dashboardService, el, _cd, instantiationService, notificationService, angularEventingService, configurationService, logService);
 		this._register(dashboardService.onUpdatePage(() => {
 			this.refresh(true);
 			this._cd.detectChanges();
@@ -68,6 +58,5 @@ export class DatabaseDashboardPage extends DashboardPage implements OnInit {
 	ngOnInit() {
 		this.init();
 		this._breadcrumbService.setBreadcrumbs(BreadcrumbClass.DatabasePage);
-		super.ngAfterViewInit();
 	}
 }

@@ -4,11 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IProfilerController } from 'sql/workbench/contrib/profiler/common/interfaces';
-import { ProfilerInput } from 'sql/workbench/browser/editor/profiler/profilerInput';
+import { ProfilerInput } from 'sql/workbench/contrib/profiler/browser/profilerInput';
 import { Table } from 'sql/base/browser/ui/table/table';
 import { attachTableStyler } from 'sql/platform/theme/common/styler';
 import { RowSelectionModel } from 'sql/base/browser/ui/table/plugins/rowSelectionModel.plugin';
-import { IProfilerStateChangedEvent } from 'sql/workbench/common/editor/profiler/profilerState';
+import { IProfilerStateChangedEvent } from 'sql/workbench/contrib/profiler/common/profilerState';
 import { FindWidget, ITableController, IConfigurationChangedEvent, ACTION_IDS, PROFILER_MAX_MATCHES } from 'sql/workbench/contrib/profiler/browser/profilerFindWidget';
 import { ProfilerFindNext, ProfilerFindPrevious } from 'sql/workbench/contrib/profiler/browser/profilerActions';
 
@@ -20,7 +20,7 @@ import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IEditorAction } from 'vs/editor/common/editorCommon';
 import { IOverlayWidget } from 'vs/editor/browser/editorBrowser';
 import { FindReplaceState, FindReplaceStateChangedEvent } from 'vs/editor/contrib/find/findState';
-import { EditorPane } from 'vs/workbench/browser/parts/editor/editorPane';
+import { BaseEditor } from 'vs/workbench/browser/parts/editor/baseEditor';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { Event, Emitter } from 'vs/base/common/event';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
@@ -32,14 +32,14 @@ import { localize } from 'vs/nls';
 import { CopyKeybind } from 'sql/base/browser/ui/table/plugins/copyKeybind.plugin';
 import { IClipboardService } from 'sql/platform/clipboard/common/clipboardService';
 import { handleCopyRequest } from 'sql/workbench/contrib/profiler/browser/profilerCopyHandler';
-import { ITextResourcePropertiesService } from 'vs/editor/common/services/textResourceConfigurationService';
+import { ITextResourcePropertiesService } from 'vs/editor/common/services/resourceConfiguration';
 
 export interface ProfilerTableViewState {
 	scrollTop: number;
 	scrollLeft: number;
 }
 
-export class ProfilerTableEditor extends EditorPane implements IProfilerController, ITableController {
+export class ProfilerTableEditor extends BaseEditor implements IProfilerController, ITableController {
 
 	public static ID: string = 'workbench.editor.profiler.table';
 	protected _input: ProfilerInput;
@@ -288,7 +288,7 @@ export class ProfilerTableEditor extends EditorPane implements IProfilerControll
 				: localize('ProfilerTableEditor.eventCount', "Events: {0}", this._input.data.getLength());
 
 			this._disposeStatusbarItem();
-			this._statusbarItem = this._statusbarService.addEntry({ text: message, ariaLabel: message }, 'status.eventCount', localize('status.eventCount', "Event Count"), StatusbarAlignment.RIGHT);
+			this._statusbarItem = this._statusbarService.addEntry({ text: message }, 'status.eventCount', localize('status.eventCount', "Event Count"), StatusbarAlignment.RIGHT);
 		}
 	}
 

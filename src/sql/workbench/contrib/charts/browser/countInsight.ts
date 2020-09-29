@@ -5,14 +5,13 @@
 
 import 'vs/css!./media/countInsight';
 
-import { IInsight } from './interfaces';
+import { IInsight, IInsightData } from './interfaces';
 
 import { $, clearNode } from 'vs/base/browser/dom';
-import { IInsightOptions, InsightType } from 'sql/workbench/contrib/charts/common/interfaces';
-import { IInsightData } from 'sql/platform/dashboard/browser/insightRegistry';
+import { InsightType } from 'sql/workbench/contrib/charts/common/interfaces';
 
 export class CountInsight implements IInsight {
-	public options: IInsightOptions = { type: InsightType.Count };
+	public options;
 	public static readonly types = [InsightType.Count];
 	public readonly types = CountInsight.types;
 

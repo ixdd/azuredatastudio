@@ -5,8 +5,8 @@
 
 import { localize } from 'vs/nls';
 import { Action } from 'vs/base/common/actions';
-import { ITaskService } from 'sql/workbench/services/tasks/common/tasksService';
-import { TaskNode } from 'sql/workbench/services/tasks/common/tasksNode';
+import { ITaskService } from 'sql/platform/tasks/common/tasksService';
+import { TaskNode, TaskExecutionMode, TaskStatus } from 'sql/platform/tasks/common/tasksNode';
 import { IQueryEditorService } from 'sql/workbench/services/queryEditor/common/queryEditorService';
 import Severity from 'vs/base/common/severity';
 import { IErrorMessageService } from 'sql/platform/errorMessage/common/errorMessageService';
@@ -24,7 +24,7 @@ export class CancelAction extends Action {
 		super(id, label);
 	}
 	public run(element: TaskNode): Promise<boolean> {
-		if (element instanceof TaskNode && element.providerName) {
+		if (element instanceof TaskNode) {
 			this._taskService.cancelTask(element.providerName, element.id).then((result) => {
 				if (!result) {
 					let error = localize('errorMsgFromCancelTask', "The task is failed to cancel.");
@@ -57,12 +57,12 @@ export class ScriptAction extends Action {
 		super(id, label);
 	}
 
-	public async run(element: TaskNode): Promise<boolean> {
+	public run(element: TaskNode): Promise<boolean> {
 		if (element instanceof TaskNode) {
 			if (element.script && element.script !== '') {
-				this._queryEditorService.newSqlEditor({ initalContent: element.script });
+				this._queryEditorService.newSqlEditor(element.script);
 			}
 		}
-		return true;
+		return Promise.resolve(true);
 	}
 }

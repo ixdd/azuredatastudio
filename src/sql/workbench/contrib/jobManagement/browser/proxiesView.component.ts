@@ -11,8 +11,8 @@ import * as nls from 'vs/nls';
 import { Component, Inject, forwardRef, ElementRef, ChangeDetectorRef, ViewChild, OnInit, OnDestroy } from '@angular/core';
 import { Table } from 'sql/base/browser/ui/table/table';
 import { AgentViewComponent } from 'sql/workbench/contrib/jobManagement/browser/agentView.component';
-import { IJobManagementService } from 'sql/workbench/services/jobManagement/common/interfaces';
-import { EditProxyAction, DeleteProxyAction, NewProxyAction } from 'sql/workbench/contrib/jobManagement/browser/jobActions';
+import { IJobManagementService } from 'sql/platform/jobManagement/common/interfaces';
+import { EditProxyAction, DeleteProxyAction, NewProxyAction } from 'sql/platform/jobManagement/browser/jobActions';
 import { CommonServiceInterface } from 'sql/workbench/services/bootstrap/browser/commonServiceInterface.service';
 import { TabChild } from 'sql/base/browser/ui/panel/tab.component';
 import { JobManagementView } from 'sql/workbench/contrib/jobManagement/browser/jobManagementView';
@@ -22,7 +22,7 @@ import { IAction } from 'vs/base/common/actions';
 import { ICommandService } from 'vs/platform/commands/common/commands';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IDashboardService } from 'sql/platform/dashboard/browser/dashboardService';
-import { ProxiesCacheObject } from 'sql/workbench/services/jobManagement/common/jobManagementService';
+import { ProxiesCacheObject } from 'sql/platform/jobManagement/common/jobManagementService';
 import { RowDetailView } from 'sql/base/browser/ui/table/plugins/rowDetailView';
 
 export const VIEW_SELECTOR: string = 'jobproxiesview-component';
@@ -35,6 +35,9 @@ export const ROW_HEIGHT: number = 45;
 })
 
 export class ProxiesViewComponent extends JobManagementView implements OnInit, OnDestroy {
+
+	private NewProxyText: string = nls.localize('jobProxyToolbar-NewItem', "New Proxy");
+	private RefreshText: string = nls.localize('jobProxyToolbar-Refresh', "Refresh");
 
 	private columns: Array<Slick.Column<any>> = [
 		{
@@ -58,7 +61,7 @@ export class ProxiesViewComponent extends JobManagementView implements OnInit, O
 	};
 
 	private dataView: any;
-	public _isCloud: boolean;
+	private _isCloud: boolean;
 	private _proxiesCacheObject: ProxiesCacheObject;
 
 	public proxies: azdata.AgentProxyInfo[];
@@ -69,6 +72,7 @@ export class ProxiesViewComponent extends JobManagementView implements OnInit, O
 
 	constructor(
 		@Inject(forwardRef(() => ChangeDetectorRef)) private _cd: ChangeDetectorRef,
+		@Inject(forwardRef(() => ElementRef)) private _el: ElementRef,
 		@Inject(forwardRef(() => AgentViewComponent)) _agentViewComponent: AgentViewComponent,
 		@Inject(IJobManagementService) private _jobManagementService: IJobManagementService,
 		@Inject(ICommandService) private _commandService: ICommandService,

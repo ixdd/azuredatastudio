@@ -6,8 +6,12 @@
 import * as platform from 'vs/platform/registry/common/platform';
 import { IJSONSchema } from 'vs/base/common/jsonSchema';
 import * as nls from 'vs/nls';
+<<<<<<< HEAD
 import { values } from 'vs/base/common/collections';
 import { IInsightsConfig } from 'sql/platform/extensions/common/extensions';
+=======
+import { IInsightData } from 'sql/workbench/contrib/charts/browser/interfaces';
+>>>>>>> origin/workbenchlinting
 
 export type InsightIdentifier = string;
 

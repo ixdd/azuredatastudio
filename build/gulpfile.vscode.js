@@ -84,20 +84,25 @@ const vscodeResources = [
 	'out-build/sql/parts/admin/**/*.html',
 	'out-build/sql/parts/connection/connectionDialog/media/*.{gif,png,svg}',
 	'out-build/sql/parts/common/dblist/**/*.html',
-	'out-build/sql/workbench/parts/dashboard/**/*.html',
+	'out-build/sql/workbench/contrib/dashboard/**/*.html',
 	'out-build/sql/parts/disasterRecovery/**/*.html',
 	'out-build/sql/parts/common/modal/media/**',
-	'out-build/sql/workbench/parts/grid/media/**',
-	'out-build/sql/workbench/parts/grid/views/**/*.html',
+	'out-build/sql/workbench/contrib/grid/media/**',
+	'out-build/sql/workbench/contrib/grid/views/**/*.html',
 	'out-build/sql/parts/tasks/**/*.html',
 	'out-build/sql/parts/taskHistory/viewlet/media/**',
 	'out-build/sql/parts/jobManagement/common/media/*.svg',
 	'out-build/sql/media/objectTypes/*.svg',
 	'out-build/sql/media/icons/*.svg',
+<<<<<<< HEAD
 	'out-build/sql/workbench/parts/notebook/media/**/*.svg',
 	'out-build/sql/setup.js', // {{SQL CARBON EDIT}} end
 	'out-build/vs/code/electron-sandbox/processExplorer/processExplorer.js',
 	'out-build/vs/code/electron-sandbox/proxy/auth.js',
+=======
+	'out-build/sql/workbench/contrib/notebook/media/**/*.svg',
+	'out-build/sql/setup.js',
+>>>>>>> origin/workbenchlinting
 	'!**/test/**'
 ];
 

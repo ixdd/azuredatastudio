@@ -6,12 +6,16 @@
 import { IExtensionPointUser } from 'vs/workbench/services/extensions/common/extensionsRegistry';
 import { IJSONSchema } from 'vs/base/common/jsonSchema';
 import * as nls from 'vs/nls';
-import { NavSectionConfig } from 'sql/workbench/contrib/dashboard/browser/core/dashboardWidget';
+import { join } from 'vs/base/common/path';
+import { createCSSRule, asCSSUrl } from 'vs/base/browser/dom';
+import { URI } from 'vs/base/common/uri';
+import { IdGenerator } from 'vs/base/common/idGenerator';
+import * as resources from 'vs/base/common/resources';
+
+import { NavSectionConfig, IUserFriendlyIcon } from 'sql/workbench/contrib/dashboard/browser/core/dashboardWidget';
 import { registerContainerType, generateNavSectionContainerTypeSchemaProperties } from 'sql/platform/dashboard/common/dashboardContainerRegistry';
 import { WIDGETS_CONTAINER, validateWidgetContainerContribution } from 'sql/workbench/contrib/dashboard/browser/containers/dashboardWidgetContainer.contribution';
 import { GRID_CONTAINER, validateGridContainerContribution } from 'sql/workbench/contrib/dashboard/browser/containers/dashboardGridContainer.contribution';
-import { values } from 'vs/base/common/collections';
-import { createCSSRuleForIcon, isValidIcon } from 'sql/workbench/contrib/dashboard/browser/dashboardIconUtil';
 
 export const NAV_SECTION = 'nav-section';
 
@@ -61,6 +65,38 @@ const NavSectionSchema: IJSONSchema = {
 
 registerContainerType(NAV_SECTION, NavSectionSchema);
 
+function isValidIcon(icon: IUserFriendlyIcon, extension: IExtensionPointUser<any>): boolean {
+	if (typeof icon === 'undefined') {
+		return false;
+	}
+	if (typeof icon === 'string') {
+		return true;
+	} else if (typeof icon.dark === 'string' && typeof icon.light === 'string') {
+		return true;
+	}
+	extension.collector.error(nls.localize('opticon', "property `icon` can be omitted or must be either a string or a literal like `{dark, light}`"));
+	return false;
+}
+
+const ids = new IdGenerator('contrib-dashboardNavSection-icon-');
+
+function createCSSRuleForIcon(icon: IUserFriendlyIcon, extension: IExtensionPointUser<any>): string {
+	let iconClass: string;
+	if (icon) {
+		iconClass = ids.nextId();
+		if (typeof icon === 'string') {
+			const path = resources.joinPath(extension.description.extensionLocation, icon);
+			createCSSRule(`.icon.${iconClass}`, `background-image: ${asCSSUrl(path)}`);
+		} else {
+			const light = resources.joinPath(extension.description.extensionLocation, icon.light);
+			const dark = resources.joinPath(extension.description.extensionLocation, icon.dark);
+			createCSSRule(`.icon.${iconClass}`, `background-image: ${asCSSUrl(light)}`);
+			createCSSRule(`.vs-dark .icon.${iconClass}, .hc-black .icon.${iconClass}`, `background-image: ${asCSSUrl(dark)}`);
+		}
+	}
+	return iconClass;
+}
+
 export function validateNavSectionContributionAndRegisterIcon(extension: IExtensionPointUser<any>, navSectionConfigs: NavSectionConfig[]): boolean {
 	let result = true;
 	navSectionConfigs.forEach(section => {
@@ -84,7 +120,7 @@ export function validateNavSectionContributionAndRegisterIcon(extension: IExtens
 		}
 
 		const containerKey = Object.keys(section.container)[0];
-		const containerValue = values(section.container)[0];
+		const containerValue = Object.values(section.container)[0];
 
 		switch (containerKey) {
 			case WIDGETS_CONTAINER:
